@@ -1,0 +1,26 @@
+/* src/components/Layout.css */
+
+.layout {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 100vh !important;
+}
+
+.layout-header {
+  background-color: #0464b3;
+  color: #FFFFFF;
+  padding: 20px;
+  text-align: center;
+}
+
+.layout-main {
+  flex: 1 !important;
+  /*padding: 20px;*/
+}
+
+.layout-footer {
+  background-color: #282C34 !important;
+  color: white !important;
+  text-align: center !important;
+  padding: 10px !important;
+}

@@ -1,0 +1,235 @@
+/* src/pages/Transferencia.css */
+
+.transfer-container {
+    margin: 80px auto;
+    padding: 20px;
+    max-width: 600px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.transfer-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.select-input,
+.textarea-input,
+.file-input {
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    color: #333;
+    background-color: #c7ceff;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.select-input:focus,
+.textarea-input:focus,
+.file-input:focus {
+    outline: none;
+    border-color: #347B98;
+    background-color: #eef7fb;
+}
+
+.textarea-input {
+    resize: vertical;
+}
+
+.submit-button {
+    padding: 12px 0;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #fff;
+    background-color: #347B98;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.submit-button:hover {
+    background-color: #295f73;
+}
+        
+.transfer-container {
+    margin: 80px auto;
+    padding: 20px;
+    max-width: 1200px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.transfer-content {
+    display: flex;
+    gap: 40px;
+}
+
+.transfer-form {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.transfer-summary {
+    flex: 1;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    font-size: 1.2rem;
+}
+
+.transfer-summary h3, .transfer-summary h4 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.transfer-summary p {
+    margin: 4px 0;
+    color: #666;
+}
+
+/* src/pages/Transferencia.css */
+
+.transfer-container {
+    margin: 80px auto;
+    padding: 20px;
+    max-width: 1200px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.transfer-content {
+    display: flex;
+    gap: 40px;
+}
+
+.transfer-form {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.transfer-summary {
+    flex: 1;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Añadir sombra sutil */
+}
+
+.transfer-summary h3 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.5rem; /* Aumentar tamaño del título */
+}
+
+.transfer-summary h4 {
+    margin: 10px 0;
+    color: #347B98; /* Cambiar color para destacar */
+    font-size: 1.2rem; /* Aumentar tamaño de subtítulos */
+}
+
+.transfer-summary p {
+    margin: 4px 0;
+    color: #666;
+    font-size: 1.1rem; /* Aumentar tamaño de texto de los párrafos */
+}
+
+label {
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #333;
+    font-size: 1.1rem; /* Aumentar tamaño de los labels */
+}
+
+.select-input,
+.textarea-input,
+.file-input {
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+    color: #333;
+    background-color: #f9f9f9;
+}
+
+.select-input:focus,
+.textarea-input:focus,
+.file-input:focus {
+    outline: none;
+    border-color: #347B98;
+    background-color: #eef7fb;
+}
+
+.textarea-input {
+    resize: vertical;
+}
+
+.submit-button {
+    padding: 12px 0;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #fff;
+    background-color: #347B98;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.submit-button:hover {
+    background-color: #295f73;
+}
+
+/* Mensaje de éxito y error */
+.status-message {
+    margin-top: 15px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Estilo de mensaje de éxito */
+.status-message.success {
+    color: #2d7a2e;
+    background-color: #e1f7e2;
+    border: 1px solid #a3e1a4;
+}
+
+/* Estilo de mensaje de error */
+.status-message.error {
+    color: #a83232;
+    background-color: #f9dcdc;
+    border: 1px solid #f3a6a6;
+}
+
+/* Icono del mensaje */
+.status-message .icon {
+    font-size: 1.2rem;
+}
+

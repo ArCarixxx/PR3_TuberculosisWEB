@@ -1,0 +1,48 @@
+/* src/index.css */
+
+@import url('https://fonts.googleapis.com/css?family=Open+Sans');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Open Sans', sans-serif;
+  color: #222222;
+  padding-bottom: 0px;
+}
+
+body {
+  padding: 0;
+  /*font-size: 1em;
+  line-height: 1.6;*/
+  color: #444 !important;
+}
+
+html {
+  /*font-size: 62.5%;*/
+}
+
+html {
+  font-family: sans-serif;
+  /*-ms-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;*/
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body, button, input, select, textarea {
+  font-family: AritaSans,Arial,Helvetica,"Malgun Gothic","맑은 고딕","Nanum Gothic","나눔 고딕","돋움",dotum,sans-serif
+}
+
+::selection {
+  background: #0464b3;
+  color: #FFFFFF;
+  text-shadow: none;
+}

@@ -1,0 +1,27 @@
+
+
+.card {
+  border: 1px solid #d1e7dd;
+  border-radius: 8px;
+}
+
+.btn-primary {
+  background-color: #347B98;
+  border-color: #2a7281;
+}
+
+.btn-primary:hover {
+  background-color: #347B98;
+  border-color: #347B98;
+}
+
+.custom-bg {
+  background-color: #347B98;
+}
+
+.search-input {
+  width: 300px; 
+  max-width: 100%; 
+}
+
+
