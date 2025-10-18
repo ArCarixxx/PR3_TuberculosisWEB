@@ -1,13 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import '../App.css'; 
+import '../Header.css'; 
 
 const Header = () => {
   return (
     <header className="header">
       <nav className="navbar navbar-expand-lg navbar-dark custom-bg">
         <div className="container">
-          <Link className="navbar-brand" to="/homea">Sistema Tuberculosis</Link>
+          <Link className="navbar-brand" to="/homesa">Sistema Tuberculosis</Link>
           <button 
             className="navbar-toggler" 
             type="button" 
@@ -26,7 +26,7 @@ const Header = () => {
                 <Link className="nav-link" to="/lista-personal-saludSA">Personal Salud</Link>
               </li>
               <li className="nav-item">
-                <Link className="nav-link" to="/registrar-establecimientoSA">Registrar Establecimiento</Link>
+                <Link className="nav-link" to="/lista-establecimientos">Establecimientos</Link>
               </li>
               <li className="nav-item">
                 <Link className="nav-link" to="/seguimiento-tratamientosSA">Seguimiento Tratamientos</Link> 

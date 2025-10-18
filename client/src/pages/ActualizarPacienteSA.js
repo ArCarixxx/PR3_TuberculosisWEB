@@ -1,84 +1,66 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useNavigate, useParams } from "react-router-dom";
 import Layout from "../components/Layout";
+import "./RegistrarPersonalSalud.css"; // usa el mismo estilo moderno
 
-function ActualizarPaciente() {
+const ActualizarPacienteSA = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
   const [paciente, setPaciente] = useState({
-    nombres: '',
-    primerApellido: '',
-    segundoApellido: '',
-    numeroCelular: '',
-    fechaNacimiento: '',
-    sexo: '',
-    direccion: '',
-    CI: '',
-    EstablecimientoSalud_idEstablecimientoSalud: '',
-    idCriterioIngreso: ''
+    nombres: "",
+    primerApellido: "",
+    segundoApellido: "",
+    numeroCelular: "",
+    fechaNacimiento: "",
+    sexo: "",
+    direccion: "",
+    CI: "",
+    EstablecimientoSalud_idEstablecimientoSalud: "",
+    idCriterioIngreso: "",
   });
 
   const [establecimientos, setEstablecimientos] = useState([]);
   const [criterios, setCriterios] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  // 🔹 Cargar datos
   useEffect(() => {
-    const obtenerPaciente = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get(`http://localhost:3001/api/pacientesForm/${id}`);
-        const data = response.data;
+        const [resPaciente, resEst, resCrit] = await Promise.all([
+          axios.get(`http://localhost:3001/api/pacientes/${id}`),
+          axios.get("http://localhost:3001/api/establecimientos"),
+          axios.get("http://localhost:3001/api/criterios"),
+        ]);
 
-        // Convertir fechaNacimiento a formato 'YYYY-MM-DD' si es necesario
+        const data = resPaciente.data;
         if (data.fechaNacimiento) {
-          data.fechaNacimiento = new Date(data.fechaNacimiento).toISOString().split('T')[0];
+          data.fechaNacimiento = new Date(data.fechaNacimiento)
+            .toISOString()
+            .split("T")[0];
         }
-
         setPaciente(data);
+        setEstablecimientos(resEst.data);
+        setCriterios(resCrit.data);
       } catch (error) {
-        console.error('Error al obtener los datos del paciente:', error);
+        console.error("Error al cargar los datos:", error);
+        alert("No se pudieron cargar los datos del paciente.");
+      } finally {
+        setLoading(false);
       }
     };
 
-    const obtenerEstablecimientos = async () => {
-      try {
-        const response = await axios.get('http://localhost:3001/api/establecimientos');
-        setEstablecimientos(response.data);
-      } catch (error) {
-        console.error('Error al obtener los establecimientos:', error);
-      }
-    };
-
-    const obtenerCriterios = async () => {
-      try {
-        const response = await axios.get('http://localhost:3001/api/criterios');
-        setCriterios(response.data);
-      } catch (error) {
-        console.error('Error al obtener los criterios:', error);
-      }
-    };
-
-    obtenerPaciente();
-    obtenerEstablecimientos();
-    obtenerCriterios();
+    fetchData();
   }, [id]);
 
-  const validateTextInput = (e) => {
-    const regex = /^[A-Za-z\s]*$/;
-    if (!regex.test(e.key)) {
-      e.preventDefault();
-    }
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setPaciente((prev) => ({ ...prev, [name]: value }));
   };
 
-  const validatePhoneInput = (e) => {
-    const value = e.target.value + e.key;
-    const regex = /^[67]\d{0,7}$/;
-    if (!regex.test(value)) {
-      e.preventDefault();
-    }
-  };
-
-  const actualizarPaciente = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (paciente.numeroCelular.length !== 8) {
@@ -86,180 +68,189 @@ function ActualizarPaciente() {
       return;
     }
 
-    if (!paciente.idCriterioIngreso) {
-      alert("Por favor selecciona un criterio de ingreso.");
-      return;
+    try {
+      await axios.put(`http://localhost:3001/api/pacientes/${id}`, paciente);
+      alert("✅ Paciente actualizado correctamente.");
+      navigate("/lista-pacientesSA");
+    } catch (error) {
+      console.error("Error al actualizar:", error);
+      alert("❌ No se pudo actualizar el paciente.");
     }
-
-    axios.put(`http://localhost:3001/api/pacientes/${id}`, paciente)
-      .then(response => {
-        alert('Paciente actualizado correctamente');
-        navigate('/lista-pacientes');
-      })
-      .catch(error => {
-        console.error('Error al actualizar paciente:', error);
-        alert('No se pudo actualizar el paciente. Intente de nuevo más tarde.');
-      });
   };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="text-center mt-5">Cargando datos...</div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
-    <div className="container mt-4">
-      <h2 className="text-center mb-4">Actualizar Paciente</h2>
+      <div className="form-wrapper">
+        <div className="form-card">
+          <h2 className="text-center mb-4">Actualizar Paciente</h2>
 
-      <div className="card p-4">
-        <form onSubmit={actualizarPaciente}>
-          <div className="form-group mb-3">
-            <label>Nombres</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Nombres"
-              value={paciente.nombres}
-              onChange={e => setPaciente({ ...paciente, nombres: e.target.value })}
-              onKeyPress={validateTextInput}
-              required
-            />
-          </div>
-          <div className="form-group mb-3">
-            <label>Primer Apellido</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Primer Apellido"
-              value={paciente.primerApellido}
-              onChange={e => setPaciente({ ...paciente, primerApellido: e.target.value })}
-              onKeyPress={validateTextInput}
-              required
-            />
-          </div>
-          <div className="form-group mb-3">
-            <label>Segundo Apellido</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Segundo Apellido"
-              value={paciente.segundoApellido}
-              onChange={e => setPaciente({ ...paciente, segundoApellido: e.target.value })}
-              onKeyPress={validateTextInput}
-            />
-          </div>
-          <div className="form-group mb-3">
-            <label>Celular</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Celular"
-              value={paciente.numeroCelular}
-              onChange={e => setPaciente({ ...paciente, numeroCelular: e.target.value })}
-              onKeyPress={validatePhoneInput}
-              required
-            />
-          </div>
-          <div className="form-group mb-3">
-            <label>Fecha de Nacimiento</label>
-            <input
-              type="date"
-              className="form-control"
-              value={paciente.fechaNacimiento}
-              onChange={e => setPaciente({ ...paciente, fechaNacimiento: e.target.value })}
-              required
-            />
-          </div>
-          <div className="form-group mb-3">
-            <label>Sexo</label>
-            <select
-              className="form-control"
-              value={paciente.sexo}
-              onChange={e => setPaciente({ ...paciente, sexo: e.target.value })}
-              required
-            >
-              <option value="">Seleccione</option>
-              <option value="Femenino">Femenino</option>
-              <option value="Masculino">Masculino</option>
-            </select>
-          </div>
-          <div className="form-group mb-3">
-            <label>Dirección</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Dirección"
-              value={paciente.direccion}
-              onChange={e => setPaciente({ ...paciente, direccion: e.target.value })}
-            />
-          </div>
-          <div className="form-group mb-3">
-            <label>CI</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="CI"
-              value={paciente.CI}
-              onChange={e => setPaciente({ ...paciente, CI: e.target.value })}
-              onKeyPress={(e) => {
-                if (paciente.CI.length >= 13) {
-                  e.preventDefault();
-                }
-              }}
-              required
-            />
-          </div>
-          <div className="form-group mb-3">
-            <label>Establecimiento</label>
-            <select
-              className="form-control"
-              value={paciente.EstablecimientoSalud_idEstablecimientoSalud}
-              onChange={e => setPaciente({ ...paciente, EstablecimientoSalud_idEstablecimientoSalud: e.target.value })}
-              required
-            >
-              <option value="">Seleccione un establecimiento</option>
-              {establecimientos.map((establecimiento) => {
-                return (
-                  <option
-                    key={establecimiento.id}
-                    value={establecimiento.id}
-                  >
-                    {establecimiento.nombre}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-          <div className="form-group mb-3">
-            <label>Criterio de Ingreso</label>
-            <select
-              className="form-control"
-              value={paciente.idCriterioIngreso}
-              onChange={e => setPaciente({ ...paciente, idCriterioIngreso: e.target.value })}
-              required
-            >
-              <option value="">Seleccione un criterio</option>
-              {criterios.map(crit => (
-                <option key={crit.idCriterioIngreso} value={crit.idCriterioIngreso}>
-                  {`${crit.tipo}-${crit.subtipo}-${crit.estadoIngreso}`}
-                </option>
-              ))}
-            </select>
-          </div>
+          <form onSubmit={handleSubmit}>
+            <div className="row g-3">
+              <div className="col-md-6">
+                <label className="form-label">* Nombres</label>
+                <input
+                  type="text"
+                  name="nombres"
+                  className="form-control"
+                  value={paciente.nombres}
+                  onChange={handleChange}
+                  placeholder="Ej: Juan Carlos"
+                  required
+                />
+              </div>
 
-          <div className="d-flex justify-content-center mt-3">
-            <button type="submit" className="btn btn-primary me-2">
-              Actualizar Paciente
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => navigate('/lista-pacientesSA')}
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
+              <div className="col-md-6">
+                <label className="form-label">* Primer Apellido</label>
+                <input
+                  type="text"
+                  name="primerApellido"
+                  className="form-control"
+                  value={paciente.primerApellido}
+                  onChange={handleChange}
+                  placeholder="Ej: Pérez"
+                  required
+                />
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">Segundo Apellido</label>
+                <input
+                  type="text"
+                  name="segundoApellido"
+                  className="form-control"
+                  value={paciente.segundoApellido}
+                  onChange={handleChange}
+                  placeholder="Ej: Gómez"
+                />
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">* CI</label>
+                <input
+                  type="text"
+                  name="CI"
+                  className="form-control"
+                  value={paciente.CI}
+                  onChange={handleChange}
+                  placeholder="Ej: 12345678"
+                  required
+                />
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">* Número de Celular</label>
+                <input
+                  type="text"
+                  name="numeroCelular"
+                  className="form-control"
+                  value={paciente.numeroCelular}
+                  onChange={handleChange}
+                  placeholder="Ej: 76543210"
+                  required
+                />
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">* Sexo</label>
+                <select
+                  name="sexo"
+                  className="form-select"
+                  value={paciente.sexo}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Seleccionar Sexo</option>
+                  <option value="Masculino">Masculino</option>
+                  <option value="Femenino">Femenino</option>
+                </select>
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">* Fecha de Nacimiento</label>
+                <input
+                  type="date"
+                  name="fechaNacimiento"
+                  className="form-control"
+                  value={paciente.fechaNacimiento}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">Dirección</label>
+                <input
+                  type="text"
+                  name="direccion"
+                  className="form-control"
+                  value={paciente.direccion}
+                  onChange={handleChange}
+                  placeholder="Ej: Av. América #123"
+                />
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">* Establecimiento de Salud</label>
+                <select
+                  name="EstablecimientoSalud_idEstablecimientoSalud"
+                  className="form-select"
+                  value={paciente.EstablecimientoSalud_idEstablecimientoSalud}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Seleccionar Establecimiento</option>
+                  {establecimientos.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">* Criterio de Ingreso</label>
+                <select
+                  name="idCriterioIngreso"
+                  className="form-select"
+                  value={paciente.idCriterioIngreso}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Seleccionar Criterio</option>
+                  {criterios.map((c) => (
+                    <option key={c.idCriterioIngreso} value={c.idCriterioIngreso}>
+                      {`${c.tipo} ${c.subtipo ? `- ${c.subtipo}` : ""} (${c.estadoIngreso})`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="form-actions">
+              <button type="submit" className="btn btn-primary me-2">
+                Actualizar
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => navigate("/lista-pacientesSA")}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
     </Layout>
   );
-}
+};
 
-export default ActualizarPaciente;
+export default ActualizarPacienteSA;

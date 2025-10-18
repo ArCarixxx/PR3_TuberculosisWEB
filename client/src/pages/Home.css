@@ -1,39 +1,259 @@
-/* src/pages/Home.css */
+.home-container {
+  font-family: "Poppins", sans-serif;
+  overflow-x: hidden;
+}
 
-.hero {
-    /*background-image: url('https://images.pexels.com/photos/450035/pexels-photo-450035.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260');*/
-    background-image: url('../../public/images/sedesFondo.jpg');
-    background-repeat: no-repeat;
-    background-size: cover;
-    background-position: bottom center;
-    height: 100vh;
-    color: #fff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    position: relative;
-    margin-bottom: 20px;
-    z-index: -2;
+/* HERO */
+.hero-section {
+  position: relative;
+  background: url("../../public/images/sedesFondo.jpg") center/cover no-repeat fixed;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  text-align: center;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 71, 161, 0.5);
+  backdrop-filter: blur(3px);
+  z-index: 1;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  padding: 30px 50px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  animation: fadeUp 1.5s ease;
+  max-width: 800px;
+}
+
+.hero-content h1 {
+  font-size: 2.8rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.hero-content h2 {
+  font-size: 1.4rem;
+  font-weight: 400;
+  color: #bbdefb;
+  margin-top: 8px;
+}
+
+.hero-content p {
+  margin-top: 15px;
+  color: #e3f2fd;
+  font-size: 1rem;
+  max-width: 650px;
+  margin-inline: auto;
+  line-height: 1.6;
+}
+
+/* INFO */
+.info {
+  padding: 80px 10%;
+  background-color: #f7fbff;
+  text-align: center;
+}
+
+.info h2 {
+  color: #1565c0;
+  font-size: 1.9rem;
+  margin-bottom: 40px;
+  font-weight: 600;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 35px;
+  justify-items: center;
+}
+
+.info-card {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  padding: 35px 25px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  max-width: 340px;
+}
+
+.info-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+}
+
+.info-card img {
+  width: 70px;
+  margin-bottom: 15px;
+}
+
+.info-card h3 {
+  color: #1565c0;
+  font-size: 1.25rem;
+  margin-bottom: 10px;
+}
+
+.info-card p {
+  color: #555;
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+
+/* PARALLAX IMPACT */
+.parallax {
+  background-attachment: fixed;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.impact {
+  position: relative;
+  background: url("../../public/images/sedesFondo.jpg") center/cover no-repeat fixed;
+  color: white;
+  padding: 90px 0;
+  text-align: center;
+}
+
+.impact-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 71, 161, 0.7);
+  z-index: 1;
+}
+
+.impact-content {
+  position: relative;
+  z-index: 2;
+}
+
+.impact-content h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 40px;
+}
+
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.stat {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 18px;
+  padding: 30px 40px;
+  min-width: 220px;
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+  transition: transform 0.3s ease;
+}
+
+.stat:hover {
+  transform: translateY(-6px);
+}
+
+.stat h3 {
+  color: #fff;
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.stat p {
+  color: #e3f2fd;
+  font-size: 1rem;
+}
+
+/* TIMELINE */
+.timeline {
+  background: #eef5ff;
+  padding: 90px 10%;
+  text-align: center;
+}
+
+.timeline h2 {
+  color: #1565c0;
+  font-size: 1.9rem;
+  margin-bottom: 60px;
+  font-weight: 600;
+}
+
+.timeline-container {
+  display: flex;
+  justify-content: center;
+  gap: 50px;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+.timeline-container::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 10%;
+  right: 10%;
+  height: 3px;
+  background: #bbdefb;
+  z-index: 0;
+}
+
+.timeline-item {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+  padding: 30px 25px;
+  width: 280px;
+  position: relative;
+  z-index: 2;
+}
+
+.circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-color: #1565c0;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  margin: 0 auto 15px auto;
+  box-shadow: 0 4px 10px rgba(21, 101, 192, 0.4);
+}
+
+.timeline-item h3 {
+  color: #386f85;
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+
+.timeline-item p {
+  color: #555;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* ANIMACIONES */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
   }
-  
-  .hero::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: -1;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
-  
-  .hero h1 {
-    font-size: 46px;
-    margin: -20px 0 20px;
-  }
-  
-  .hero p {
-    font-size: 20px;
-    letter-spacing: 1px;
-  }
+}

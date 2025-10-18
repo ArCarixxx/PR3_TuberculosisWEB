@@ -15,6 +15,7 @@ const tratamientosRoutes = require("./routes/tratamientos.routes");
 const transferenciasRoutes = require("./routes/transferencias.routes");
 const loginRoutes = require("./routes/login.routes");
 const personasRoutes = require("./routes/personas.routes");
+const criteriosRoutes = require("./routes/criterios.routes");
 
 const app = express();
 app.use(cors());
@@ -33,6 +34,7 @@ app.use("/api/tratamientos", tratamientosRoutes);
 app.use("/api/transferencias", transferenciasRoutes);
 app.use("/api/login", loginRoutes);
 app.use("/api/personas", personasRoutes);
+app.use("/api/criterios", criteriosRoutes);
 
 // ===== Alias para compatibilidad con tu frontend actual =====
 // /api/paciente/:id

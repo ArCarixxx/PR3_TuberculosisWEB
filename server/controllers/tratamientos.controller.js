@@ -22,4 +22,26 @@ async function createTratamiento(req, res, next) {
   } catch (e) { next(e); }
 }
 
-module.exports = { getTratamientos, createTratamiento };
+
+// ✅ Eliminar tratamiento por ID
+async function deleteTratamiento(req, res, next) {
+  try {
+    const { id } = req.params;
+    const [result] = await pool.query(
+      "DELETE FROM tratamiento WHERE idTratamiento = ?",
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Tratamiento no encontrado" });
+    }
+
+    res.json({ message: "✅ Tratamiento eliminado correctamente" });
+  } catch (e) {
+    console.error("Error al eliminar tratamiento:", e);
+    next(e);
+  }
+}
+
+
+module.exports = { getTratamientos, createTratamiento, deleteTratamiento };

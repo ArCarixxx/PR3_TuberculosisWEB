@@ -1,61 +1,64 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import Layout from "../components/Layout";
+import "./ListaPersonalSalud.css"; // reutilizamos estilos
 
 const SeguimientoTratamientos = () => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [results, setResults] = useState([]);
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [treatments, setTreatments] = useState([]);
   const [newTreatment, setNewTreatment] = useState({
-    medicamento: '',
-    fechaInicio: '',
-    fechaFinalizacion: '',
-    cantDosis: '',
-    intervaloTiempo: '',
+    medicamento: "",
+    fechaInicio: "",
+    fechaFinalizacion: "",
+    cantDosis: "",
+    intervaloTiempo: "",
   });
   const [showModal, setShowModal] = useState(false);
 
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
-
-  const fetchResults = async () => {
-    if (searchTerm.trim()) {
-      try {
-        const response = await fetch(`http://localhost:3001/api/pacientes`);
-        const data = await response.json();
-        const filteredResults = data.filter(person =>
-          person.nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        setResults(filteredResults);
-      } catch (error) {
-        console.error('Error fetching search results:', error);
+  // --- Buscar pacientes ---
+  useEffect(() => {
+    const fetchResults = async () => {
+      if (searchTerm.trim()) {
+        try {
+          const response = await fetch("http://localhost:3001/api/pacientes");
+          const data = await response.json();
+          const filteredResults = data.filter((person) =>
+            person.nombreCompleto
+              .toLowerCase()
+              .includes(searchTerm.toLowerCase())
+          );
+          setResults(filteredResults);
+        } catch (error) {
+          console.error("Error fetching search results:", error);
+        }
+      } else {
+        setResults([]);
       }
-    } else {
-      setResults([]);
-    }
-  };
+    };
+    fetchResults();
+  }, [searchTerm]);
 
+  // --- Obtener tratamientos ---
   const fetchTreatments = async (personId) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/tratamientos/${personId}`);
+      const response = await fetch(
+        `http://localhost:3001/api/tratamientos/${personId}`
+      );
       const data = await response.json();
       setTreatments(data);
     } catch (error) {
-      console.error('Error fetching treatments:', error);
+      console.error("Error fetching treatments:", error);
     }
   };
 
+  // --- Seleccionar paciente ---
   const handleSelectPerson = (person) => {
     setSelectedPerson(person);
     setResults([]);
     setSearchTerm(person.nombreCompleto);
     fetchTreatments(person.idPersona);
   };
-
-  useEffect(() => {
-    fetchResults();
-  }, [searchTerm]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -64,11 +67,9 @@ const SeguimientoTratamientos = () => {
 
   const handleAddTreatment = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/tratamientos`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const response = await fetch("http://localhost:3001/api/tratamientos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...newTreatment,
           Persona_idPersona: selectedPerson.idPersona,
@@ -78,93 +79,221 @@ const SeguimientoTratamientos = () => {
         fetchTreatments(selectedPerson.idPersona);
         setShowModal(false);
         setNewTreatment({
-          medicamento: '',
-          fechaInicio: '',
-          fechaFinalizacion: '',
-          cantDosis: '',
-          intervaloTiempo: '',
+          medicamento: "",
+          fechaInicio: "",
+          fechaFinalizacion: "",
+          cantDosis: "",
+          intervaloTiempo: "",
         });
       } else {
-        console.error('Error al agregar tratamiento');
+        alert("❌ Error al agregar tratamiento");
       }
     } catch (error) {
-      console.error('Error al agregar tratamiento:', error);
+      console.error("Error al agregar tratamiento:", error);
+    }
+  };
+  
+  const handleDeleteTreatment = async (idTratamiento) => {
+    const confirmDelete = window.confirm(
+      "¿Estás seguro de eliminar este tratamiento?"
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const response = await fetch(
+        `http://localhost:3001/api/tratamientos/${idTratamiento}`,
+        { method: "DELETE" }
+      );
+
+      if (response.ok) {
+        alert("✅ Tratamiento eliminado correctamente");
+        fetchTreatments(selectedPerson.idPersona); // recargar lista
+      } else {
+        alert("❌ No se pudo eliminar el tratamiento");
+      }
+    } catch (error) {
+      console.error("Error al eliminar tratamiento:", error);
+      alert("❌ Error al conectar con el servidor");
     }
   };
 
+
   return (
     <Layout>
-    <div className="container mt-5">
-      <h2>Seguimiento de Tratamientos</h2>
-      <div className="form-group">
-        <label htmlFor="search">Buscar Persona</label>
-        <input
-          type="text"
-          id="search"
-          className="form-control search-input"
-          placeholder="Ingresa el nombre de la persona"
-          value={searchTerm}
-          onChange={handleSearchChange}
-        />
-      </div>
-
-      {results.length > 0 && (
-        <ul className="list-group mt-3">
-          {results.map((person) => (
-            <li
-              key={person.idPersona}
-              className="list-group-item"
-              onClick={() => handleSelectPerson(person)}
-              style={{ cursor: 'pointer' }}
-            >
-              {person.nombreCompleto}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {selectedPerson && (
-        <div className="mt-4">
-          <h4>Persona Seleccionada:</h4>
-          <p>
-            Nombre Completo: {selectedPerson.nombreCompleto} <br />
-            Fecha de Nacimiento: {new Date(selectedPerson.fechaNacimiento).toLocaleDateString()} <br />
-            Sexo: {selectedPerson.sexo} <br />
-            Establecimiento: {selectedPerson.nombreEstablecimiento} <br />
-            Criterio de Ingreso: {selectedPerson.criterioIngreso} <br />
-            
-          </p>
-
-          <h4>Tratamientos:</h4>
-          {treatments.length > 0 ? (
-            <table className="table mt-3">
-              <thead>
-                <tr>
-                  <th>Medicamento</th>
-                  <th>Fecha Inicio</th>
-                  <th>Fecha Finalización</th>
-                  <th>Cantidad de Dosis</th>
-                  <th>Intervalo de Tiempo (hrs)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {treatments.map((treatment) => (
-                  <tr key={treatment.idTratamiento}>
-                    <td>{treatment.medicamento}</td>
-                    <td>{new Date(treatment.fechaInicio).toLocaleDateString()}</td>
-                    <td>{treatment.fechaFinalizacion ? new Date(treatment.fechaFinalizacion).toLocaleDateString() : 'N/A'}</td>
-                    <td>{treatment.cantDosis}</td>
-                    <td>{treatment.intervaloTiempo}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p>No se encontraron tratamientos para esta persona.</p>
-          )}
+      <div className="personal-container">
+        <div className="header-section">
+          <h1>Seguimiento de Tratamientos</h1>
+          <p>Consulta, gestiona y registra los tratamientos de los pacientes.</p>
         </div>
-      )}
-    </div>
+
+        {/* 🔹 Búsqueda de persona */}
+        <div className="search-bar">
+          <input
+            type="text"
+            placeholder="Buscar paciente por nombre..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        {/* 🔹 Lista de resultados */}
+        {results.length > 0 && (
+          <ul className="list-group search-results mt-3">
+            {results.map((person) => (
+              <li
+                key={person.idPersona}
+                className="list-group-item"
+                onClick={() => handleSelectPerson(person)}
+              >
+                {person.nombreCompleto}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* 🔹 Datos del paciente seleccionado */}
+        {selectedPerson && (
+          <div className="patient-info mt-4">
+            <h3>Paciente Seleccionado</h3>
+            <div className="info-card">
+              <p>
+                <strong>Nombre Completo:</strong> {selectedPerson.nombreCompleto}
+              </p>
+              <p>
+                <strong>Fecha de Nacimiento:</strong>{" "}
+                {new Date(selectedPerson.fechaNacimiento).toLocaleDateString()}
+              </p>
+              <p>
+                <strong>Sexo:</strong> {selectedPerson.sexo}
+              </p>
+              <p>
+                <strong>Establecimiento:</strong>{" "}
+                {selectedPerson.nombreEstablecimiento}
+              </p>
+              <p>
+                <strong>Criterio de Ingreso:</strong>{" "}
+                {selectedPerson.criterioIngreso}
+              </p>
+            </div>
+
+            {/* 🔹 Tabla de tratamientos */}
+            <div className="table-container mt-4">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h4>Tratamientos</h4>
+                
+              </div>
+
+              {treatments.length > 0 ? (
+                <table className="custom-table">
+                  <thead>
+                    <tr>
+                      <th>Medicamento</th>
+                      <th>Inicio</th>
+                      <th>Finalización</th>
+                      <th>Dosis</th>
+                      <th>Intervalo (hrs)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {treatments.map((t) => (
+                      <tr key={t.idTratamiento}>
+                        <td>{t.medicamento}</td>
+                        <td>{new Date(t.fechaInicio).toLocaleDateString()}</td>
+                        <td>
+                          {t.fechaFinalizacion
+                            ? new Date(t.fechaFinalizacion).toLocaleDateString()
+                            : "—"}
+                        </td>
+                        <td>{t.cantDosis}</td>
+                        <td>{t.intervaloTiempo}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+              ) : (
+                <p className="no-data">No hay tratamientos registrados.</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 🔹 Modal para registrar tratamiento */}
+        {showModal && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h4 className="text-center mb-3">Registrar Nuevo Tratamiento</h4>
+
+              <div className="form-group">
+                <label>Medicamento:</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  name="medicamento"
+                  value={newTreatment.medicamento}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Fecha de Inicio:</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  name="fechaInicio"
+                  value={newTreatment.fechaInicio}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Fecha de Finalización:</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  name="fechaFinalizacion"
+                  value={newTreatment.fechaFinalizacion}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Cantidad de Dosis:</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  name="cantDosis"
+                  value={newTreatment.cantDosis}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Intervalo de Tiempo (horas):</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  name="intervaloTiempo"
+                  value={newTreatment.intervaloTiempo}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="d-flex justify-content-center gap-3 mt-3">
+                <button className="btn btn-primary" onClick={handleAddTreatment}>
+                  Guardar
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setShowModal(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </Layout>
   );
 };

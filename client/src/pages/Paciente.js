@@ -1,138 +1,182 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { Link, useNavigate } from "react-router-dom";
 import Layout from "../components/LayoutAdmin";
+import "./ListaPersonalSalud.css"; // Reutilizamos el mismo CSS moderno
 
-function Paciente() {
-  const [personas, setPersonas] = useState([]);
-  const [busqueda, setBusqueda] = useState('');
-  const navigate = useNavigate(); // Para redirigir a otras rutas
-  
+const ListaPacientesAdmin = () => {
+  const [pacientes, setPacientes] = useState([]);
+  const [busqueda, setBusqueda] = useState("");
+  const navigate = useNavigate();
+
   const userRole = localStorage.getItem("userRole");
   const userEstablecimiento = localStorage.getItem("userEstablecimiento");
   const userIdEstablecimiento = localStorage.getItem("userIdEstablecimiento");
 
-  console.log(`Rol: ${userRole}, Establecimiento: ${userEstablecimiento}, IdEstablecimiento: ${userIdEstablecimiento}`);
+  console.log(
+    `Rol: ${userRole}, Establecimiento: ${userEstablecimiento}, IdEstablecimiento: ${userIdEstablecimiento}`
+  );
 
   useEffect(() => {
-    const userIdEstablecimiento = localStorage.getItem("userIdEstablecimiento");
-  
-    axios
-      .get(`http://localhost:3001/api/pacientesEst`, {
-        params: { userIdEstablecimiento },
-      })
-      .then((response) => setPersonas(response.data))
-      .catch((error) => {
-        console.error("Error al cargar los datos de pacientes:", error);
-        alert("No se pudieron cargar los datos de pacientes. Intente de nuevo más tarde.");
-      });
-  }, []);
-  
-  
+    const obtenerPacientes = async () => {
+      try {
+        const response = await axios.get(
+          `http://localhost:3001/api/pacientesEst`,
+          { params: { userIdEstablecimiento } }
+        );
+        setPacientes(response.data);
+      } catch (error) {
+        console.error("Error al cargar los pacientes:", error);
+        alert("No se pudieron cargar los pacientes.");
+      }
+    };
+    obtenerPacientes();
+  }, [userIdEstablecimiento]);
 
-  const desactivarPaciente = (id) => {
-    const confirmed = window.confirm('¿Estás seguro de que deseas eliminar este paciente?');
-    if (confirmed) {
-      axios.put(`http://localhost:3001/api/pacientesDelete/${id}/estado`)
-        .then(() => {
-          setPersonas(personas.map(persona => 
-            persona.idPersona === id ? { ...persona, estado: 0 } : persona
-          ));
-          alert('Paciente desactivado correctamente');
-        })
-        .catch(error => {
-          console.error('Error al desactivar paciente:', error);
-          alert('No se pudo desactivar el paciente. Intente de nuevo más tarde.');
-        });
+  const desactivarPaciente = async (id) => {
+    if (!window.confirm("¿Seguro que deseas eliminar este paciente?")) return;
+
+    try {
+      await axios.put(`http://localhost:3001/api/pacientesDelete/${id}/estado`);
+      alert("✅ Paciente eliminado correctamente");
+      setPacientes((prev) => prev.filter((p) => p.idPersona !== id));
+    } catch (error) {
+      console.error("Error al eliminar paciente:", error);
+      alert("❌ No se pudo eliminar el paciente.");
     }
   };
 
-  // Función para manejar la actualización de un paciente
   const handleActualizarPaciente = (id) => {
     navigate(`/actualizar-paciente/${id}`);
   };
 
-  // Filtrar pacientes según el nombre
-  const pacientesFiltrados = personas.filter(persona =>
-    persona.nombreCompleto.toLowerCase().includes(busqueda.toLowerCase())
-  );
-
-  // Función para formatear la fecha de nacimiento
   const formatearFecha = (fecha) => {
-    const date = new Date(fecha);
-    return date.toLocaleDateString('es-ES'); // Formato DD/MM/AAAA
+    try {
+      return new Date(fecha).toLocaleDateString("es-ES");
+    } catch {
+      return "—";
+    }
   };
+
+  const pacientesFiltrados = pacientes.filter((p) =>
+    p.nombreCompleto?.toLowerCase().includes(busqueda.toLowerCase())
+  );
 
   return (
     <Layout>
-    <div className="container mt-4">
-      <h2 className="text-center mb-4">Lista de Pacientes</h2>
+      <div className="personal-container">
+        <div className="header-section">
+          <h1>Lista de Pacientes</h1>
+          <p>
+            Pacientes registrados en el establecimiento de salud{" "}
+            <strong>{userEstablecimiento}</strong>.
+          </p>
+        </div>
 
-      {/* Campo de búsqueda alineado a la izquierda */}
-      <div className="mb-3" style={{ maxWidth: '300px' }}>
-        <input
-          type="text"
-          className="form-control"
-          placeholder="Buscar por nombre de paciente"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-        />
+        {/* 🔹 Barra de búsqueda */}
+        <div className="search-bar">
+          <input
+            type="text"
+            placeholder="Buscar paciente por nombre..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+        </div>
+
+        {/* 🔹 Tabla moderna */}
+        <div className="table-container mt-4">
+          <table className="custom-table">
+            <thead>
+              <tr>
+                <th>Nombre Completo</th>
+                <th>Celular</th>
+                <th>Fecha Nac.</th>
+                <th>Sexo</th>
+                <th>Dirección</th>
+                <th>CI</th>
+                <th>Criterio Ingreso</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pacientesFiltrados.length > 0 ? (
+                pacientesFiltrados.map((p) => (
+                  <tr key={p.idPersona}>
+                    <td>{p.nombreCompleto}</td>
+                    <td>{p.numeroCelular}</td>
+                    <td>{formatearFecha(p.fechaNacimiento)}</td>
+                    <td>{p.sexo}</td>
+                    <td>{p.direccion}</td>
+                    <td>{p.CI}</td>
+                    <td>{p.criterioIngreso}</td>
+                    <td className="acciones">
+                      <button
+                        className="icon-btn edit"
+                        title="Editar"
+                        onClick={() => handleActualizarPaciente(p.idPersona)}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                        </svg>
+                      </button>
+
+                      <button
+                        className="icon-btn delete"
+                        title="Eliminar"
+                        onClick={() => desactivarPaciente(p.idPersona)}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6l-2 14H7L5 6" />
+                          <path d="M10 11v6" />
+                          <path d="M14 11v6" />
+                          <path d="M9 6V4h6v2" />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="8" className="no-data">
+                    No se encontraron pacientes en este establecimiento
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 🔹 Botón añadir */}
+        <div className="actions mt-4">
+          <Link to="/añadir-paciente" className="btn-action add">
+            Añadir Nuevo Paciente
+          </Link>
+        </div>
       </div>
-
-      <table className="table table-bordered table-hover">
-        <thead className="table-light">
-          <tr>
-            <th>Nombre Completo</th>
-            <th>Celular</th>
-            <th>Fecha de Nacimiento</th>
-            <th>Sexo</th>
-            <th>Dirección</th>
-            <th>CI</th>
-            <th>Establecimiento de Salud</th>
-            <th>Criterio de Ingreso</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {pacientesFiltrados.map(persona => (
-            <tr key={persona.idPersona}>
-              <td>{persona.nombreCompleto}</td>
-              <td>{persona.numeroCelular}</td>
-              <td>{formatearFecha(persona.fechaNacimiento)}</td>
-              <td>{persona.sexo}</td>
-              <td>{persona.direccion}</td>
-              <td>{persona.CI}</td>
-              <td>{persona.nombreEstablecimiento}</td>
-              <td>{persona.criterioIngreso}</td>
-              <td>
-                <div className="btn-group" role="group">
-                  <button
-                    className="btn btn-warning btn-sm"
-                    onClick={() => handleActualizarPaciente(persona.idPersona)}
-                  >
-                    <i className="bi bi-pencil-fill me-1"></i>Actualizar
-                  </button>
-                  <button
-                    className="btn btn-danger btn-sm"
-                    onClick={() => desactivarPaciente(persona.idPersona)} // Cambiado a desactivarPaciente
-                  >
-                    <i className="bi bi-trash-fill me-1"></i>Eliminar
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <div className="d-flex justify-content-center mt-4">
-        <Link to="/añadir-paciente" className="btn btn-primary">
-          <i className="bi bi-plus-lg me-1"></i>Añadir Paciente
-        </Link>
-      </div>
-    </div>
     </Layout>
   );
-}
+};
 
-export default Paciente;
+export default ListaPacientesAdmin;

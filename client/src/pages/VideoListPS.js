@@ -1,13 +1,13 @@
-import React from 'react';
-import VideoDownloader from '../components/VideoDownloader.js';
-import Layout from "../components/LayoutPersonalSalud.js";
+import React from "react";
+import Layout from "../components/LayoutPersonalSalud";
+import VideoDownloader from "../components/VideoDownloader";
 
-const VideoList = () => {
+const VideoListAdmin = () => {
   return (
     <Layout>
-    <VideoDownloader/>
+      <VideoDownloader />
     </Layout>
   );
 };
 
-export default VideoList;
+export default VideoListAdmin;

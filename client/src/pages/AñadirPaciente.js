@@ -1,61 +1,56 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import Layout from "../components/LayoutAdmin";
+import "./RegistrarPersonalSalud.css"; // Usa el mismo CSS para mantener el estilo
 
-function AñadirPaciente() {
+const RegistrarPacienteAdmin = () => {
   const navigate = useNavigate();
-  
+
   const userEstablecimiento = localStorage.getItem("userEstablecimiento");
   const userIdEstablecimiento = localStorage.getItem("userIdEstablecimiento");
 
   const [nuevoPaciente, setNuevoPaciente] = useState({
-    nombres: '',
-    primerApellido: '',
-    segundoApellido: '',
-    numeroCelular: '',
-    fechaNacimiento: '',
-    sexo: '',
-    direccion: '',
-    CI: '',
-    EstablecimientoSalud_idEstablecimientoSalud: userIdEstablecimiento, 
-    idCriterioIngreso: ''
+    nombres: "",
+    primerApellido: "",
+    segundoApellido: "",
+    numeroCelular: "",
+    fechaNacimiento: "",
+    sexo: "",
+    direccion: "",
+    CI: "",
+    EstablecimientoSalud_idEstablecimientoSalud: userIdEstablecimiento,
+    idCriterioIngreso: "",
   });
 
-  const [establecimientos, setEstablecimientos] = useState([]);
   const [criterios, setCriterios] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  // 🔹 Cargar criterios
   useEffect(() => {
-
-    const obtenerCriterios = async () => {
+    const fetchCriterios = async () => {
       try {
-        const response = await axios.get('http://localhost:3001/api/criterios');
-        setCriterios(response.data);
+        const res = await axios.get("http://localhost:3001/api/criterios");
+        setCriterios(res.data);
       } catch (error) {
-        console.error('Error al obtener los criterios:', error);
+        console.error("Error al obtener los criterios:", error);
+        alert("No se pudieron cargar los criterios de ingreso.");
+      } finally {
+        setLoading(false);
       }
     };
-
-    obtenerCriterios();
+    fetchCriterios();
   }, []);
 
-  const validateTextInput = (e) => {
-    const regex = /^[A-Za-z\s]*$/;
-    if (!regex.test(e.key)) {
-      e.preventDefault();
-    }
+  // 🔹 Manejar cambios en los inputs
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setNuevoPaciente((prev) => ({ ...prev, [name]: value }));
   };
 
-  const validatePhoneInput = (e) => {
-    const value = e.target.value + e.key;
-    const regex = /^[67]\d{0,7}$/;
-    if (!regex.test(value)) {
-      e.preventDefault();
-    }
-  };
-  const añadirPaciente = (e) => {
+  // 🔹 Enviar formulario
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (nuevoPaciente.numeroCelular.length !== 8) {
       alert("El número de celular debe tener exactamente 8 dígitos.");
       return;
@@ -65,177 +60,182 @@ function AñadirPaciente() {
       alert("Por favor selecciona un criterio de ingreso.");
       return;
     }
-    axios.post('http://localhost:3001/api/pacientes', nuevoPaciente)
-      .then(response => {
-        alert('Paciente añadido correctamente');
-        setNuevoPaciente({
-          nombres: '',
-          primerApellido: '',
-          segundoApellido: '',
-          numeroCelular: '',
-          fechaNacimiento: '',
-          sexo: '',
-          direccion: '',
-          CI: '',
-          EstablecimientoSalud_idEstablecimientoSalud: '', // Cambiado aquí
-          idCriterioIngreso: ''
-        });
-        navigate('/lista-pacientes');
-      })
-      .catch(error => {
-        console.error('Error al añadir paciente:', error);
-        alert('No se pudo añadir el paciente. Intente de nuevo más tarde.');
-      });
+
+    try {
+      await axios.post("http://localhost:3001/api/pacientes", nuevoPaciente);
+      alert("✅ Paciente registrado correctamente.");
+      navigate("/lista-pacientes");
+    } catch (error) {
+      console.error("Error al registrar paciente:", error);
+      alert("❌ No se pudo registrar el paciente.");
+    }
   };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="text-center mt-5">Cargando datos...</div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
-    <div className="container mt-4">
-      <h2 className="text-center mb-4">Añadir Nuevo Paciente</h2>
+      <div className="form-wrapper">
+        <div className="form-card">
+          <h2 className="text-center mb-4">Registrar Paciente</h2>
 
-      <div className="card p-4">
-        <form onSubmit={añadirPaciente}>
-          <div className="form-group mb-3">
-            <label>Nombres</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Nombres"
-              value={nuevoPaciente.nombres}
-              onChange={e => setNuevoPaciente({ ...nuevoPaciente, nombres: e.target.value })}
-              onKeyPress={validateTextInput}
-              required
-            />
-          </div>
-          <div className="form-group mb-3">
-            <label>Primer Apellido</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Primer Apellido"
-              value={nuevoPaciente.primerApellido}
-              onChange={e => setNuevoPaciente({ ...nuevoPaciente, primerApellido: e.target.value })}
-              onKeyPress={validateTextInput}
-              required
-            />
-          </div>
-          <div className="form-group mb-3">
-            <label>Segundo Apellido</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Segundo Apellido"
-              value={nuevoPaciente.segundoApellido}
-              onChange={e => setNuevoPaciente({ ...nuevoPaciente, segundoApellido: e.target.value })}
-              onKeyPress={validateTextInput}
-            />
-          </div>
-          <div className="form-group mb-3">
-            <label>Celular</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Celular"
-              value={nuevoPaciente.celular}
-              onChange={e => setNuevoPaciente({ ...nuevoPaciente, numeroCelular: e.target.value })}
-              onKeyPress={validatePhoneInput}
-              required
-            />
-          </div>
-          <div className="form-group mb-3">
-            <label>Fecha de Nacimiento</label>
-            <input
-              type="date"
-              className="form-control"
-              value={nuevoPaciente.fechaNacimiento}
-              onChange={e => setNuevoPaciente({ ...nuevoPaciente, fechaNacimiento: e.target.value })}
-              required
-            />
-          </div>
-          <div className="form-group mb-3">
-            <label>Sexo</label>
-            <select
-              className="form-control"
-              value={nuevoPaciente.sexo}
-              onChange={e => setNuevoPaciente({ ...nuevoPaciente, sexo: e.target.value })}
-              required
-            >
-              <option value="">Seleccione</option>
-              <option value="Femenino">Femenino</option>
-              <option value="Masculino">Masculino</option>
-            </select>
-          </div>
-          <div className="form-group mb-3">
-            <label>Dirección</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Dirección"
-              value={nuevoPaciente.direccion}
-              onChange={e => setNuevoPaciente({ ...nuevoPaciente, direccion: e.target.value })}
-            />
-          </div>
-          <div className="form-group mb-3">
-            <label>CI</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="CI"
-              value={nuevoPaciente.CI}
-              onChange={e => setNuevoPaciente({ ...nuevoPaciente, CI: e.target.value })}
-              onKeyPress={(e) => {
-                if (nuevoPaciente.CI.length >= 13) {
-                  e.preventDefault();
-                }
-              }}
-              required
-            />
-          </div>
-          
-          <div className="form-group mb-3">
-            <label>Criterio de Ingreso</label>
-            <select
-              className="form-control"
-              value={nuevoPaciente.idCriterioIngreso}
-              onChange={e => setNuevoPaciente({ ...nuevoPaciente, idCriterioIngreso: e.target.value })}
-              required
-            >
-              <option value="">Seleccione un criterio</option>
-              {criterios.map(crit => (
-                <option key={crit.idCriterioIngreso} value={crit.idCriterioIngreso}>
-                  {`${crit.tipo}-${crit.subtipo}-${crit.estadoIngreso}`}
-                </option>
-              ))}
-            </select>
-          </div>
+          <form onSubmit={handleSubmit}>
+            <div className="row g-3">
+              <div className="col-md-6">
+                <label className="form-label">* Nombres</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Ej: Juan Carlos"
+                  name="nombres"
+                  value={nuevoPaciente.nombres}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
 
-          <div className="mb-3">
-            <label className="form-label">Establecimiento de Salud</label>
-            <input
-              type="text"
-              className="form-control"
-              value={userEstablecimiento}
-              readOnly
-            />
-          </div>
+              <div className="col-md-6">
+                <label className="form-label">* Primer Apellido</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Ej: Pérez"
+                  name="primerApellido"
+                  value={nuevoPaciente.primerApellido}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
 
-          <div className="d-flex justify-content-center mt-3">
-            <button type="submit" className="btn btn-primary me-2">
-              Añadir Paciente
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => navigate('/lista-pacientes')}
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
+              <div className="col-md-6">
+                <label className="form-label">Segundo Apellido</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Ej: Gómez"
+                  name="segundoApellido"
+                  value={nuevoPaciente.segundoApellido}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">* CI</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Ej: 12345678"
+                  name="CI"
+                  value={nuevoPaciente.CI}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">* Número de Celular</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Ej: 76543210"
+                  name="numeroCelular"
+                  value={nuevoPaciente.numeroCelular}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">* Sexo</label>
+                <select
+                  className="form-select"
+                  name="sexo"
+                  value={nuevoPaciente.sexo}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Seleccionar Sexo</option>
+                  <option value="Masculino">Masculino</option>
+                  <option value="Femenino">Femenino</option>
+                </select>
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">* Fecha de Nacimiento</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  name="fechaNacimiento"
+                  value={nuevoPaciente.fechaNacimiento}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">Dirección</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Ej: Av. América #123"
+                  name="direccion"
+                  value={nuevoPaciente.direccion}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">* Criterio de Ingreso</label>
+                <select
+                  className="form-select"
+                  name="idCriterioIngreso"
+                  value={nuevoPaciente.idCriterioIngreso}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Seleccionar Criterio</option>
+                  {criterios.map((c) => (
+                    <option key={c.idCriterioIngreso} value={c.idCriterioIngreso}>
+                      {`${c.tipo} ${c.subtipo ? `- ${c.subtipo}` : ""} (${c.estadoIngreso})`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">Establecimiento de Salud</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={userEstablecimiento}
+                  readOnly
+                />
+              </div>
+            </div>
+
+            <div className="form-actions">
+              <button type="submit" className="btn btn-primary me-2">
+                Registrar
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => navigate("/lista-pacientes")}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
     </Layout>
   );
-}
+};
 
-export default AñadirPaciente;
+export default RegistrarPacienteAdmin;

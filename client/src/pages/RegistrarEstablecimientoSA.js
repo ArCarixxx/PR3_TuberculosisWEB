@@ -1,24 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
+import "./RegistrarPersonalSalud.css"; // reutilizamos los estilos modernos
 
 const RegistrarEstablecimiento = () => {
-  const [selectedSede, setSelectedSede] = useState('');
-  const [selectedRedSalud, setSelectedRedSalud] = useState('');
+  const navigate = useNavigate();
+  const [selectedSede, setSelectedSede] = useState("");
+  const [selectedRedSalud, setSelectedRedSalud] = useState("");
   const [sedes, setSedes] = useState([]);
   const [redesSalud, setRedesSalud] = useState([]);
-  const [nuevaRedSalud, setNuevaRedSalud] = useState('');
-  const [clasificacion, setClasificacion] = useState('');
-  const [telefono, setTelefono] = useState(''); // Estado para el teléfono
-
+  const [nuevaRedSalud, setNuevaRedSalud] = useState("");
+  const [clasificacion, setClasificacion] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [nombreEstablecimiento, setNombreEstablecimiento] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchSedes = async () => {
       try {
-        const response = await axios.get('http://localhost:3001/api/sedes');
+        const response = await axios.get("http://localhost:3001/api/sedes");
         setSedes(response.data);
       } catch (error) {
-        console.error('Error al obtener las sedes:', error);
+        console.error("Error al obtener las sedes:", error);
       }
     };
     fetchSedes();
@@ -28,10 +32,12 @@ const RegistrarEstablecimiento = () => {
     const fetchRedesSalud = async () => {
       if (selectedSede) {
         try {
-          const response = await axios.get(`http://localhost:3001/api/redesSalud/${selectedSede}`);
+          const response = await axios.get(
+            `http://localhost:3001/api/redesSalud/${selectedSede}`
+          );
           setRedesSalud(response.data);
         } catch (error) {
-          console.error('Error al obtener las redes de salud:', error);
+          console.error("Error al obtener las redes de salud:", error);
         }
       } else {
         setRedesSalud([]);
@@ -40,165 +46,184 @@ const RegistrarEstablecimiento = () => {
     fetchRedesSalud();
   }, [selectedSede]);
 
-  const handleSedeChange = (event) => {
-    setSelectedSede(event.target.value);
-    setSelectedRedSalud('');
-    setRedesSalud([]);
-    setNuevaRedSalud('');
-  };
-
-  const handleRedSaludChange = (event) => {
-    setSelectedRedSalud(event.target.value);
-  };
-
-  const handleNuevaRedSaludChange = (event) => {
-    setNuevaRedSalud(event.target.value);
-  };
-
-  const handleClasificacionChange = (event) => {
-    setClasificacion(event.target.value);
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-  
-    const nombreEstablecimiento = event.target[0].value;
-    const telefono = event.target[1].value;
-    const selectedRedSaludId = selectedRedSalud;
-  
-    if (selectedRedSaludId && selectedRedSaludId !== 'nueva') {
-      try {
-        const response = await axios.post('http://localhost:3001/api/establecimientoSalud', {
-          nombreEstablecimiento,
-          telefono,
-          clasificacion,
-          idRedSalud: selectedRedSaludId,
-        });
-        alert(response.data.message); // Mensaje de éxito
-      } catch (error) {
-        if (error.response && error.response.data.error) {
-          // Si hay un error relacionado con el establecimiento ya existente
-          alert(error.response.data.error);
-        } else {
-          console.error('Error registrando el establecimiento:', error);
-          alert('Error registrando el establecimiento. Inténtalo nuevamente.');
-        }
-      }
-    }
-  };
-  
-
-  // Función para crear la nueva red de salud
-  const handleCreateRedSalud = async () => {
-    if (!nuevaRedSalud) {
-      alert('Por favor, ingrese el nombre de la nueva red de salud.');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedRedSalud || !clasificacion || !telefono || !nombreEstablecimiento) {
+      alert("Por favor, complete todos los campos obligatorios.");
       return;
     }
 
     try {
-      await axios.post('http://localhost:3001/api/redesSalud', {
-        nombreRedSalud: nuevaRedSalud,
-        idSede: selectedSede,
-      });
-      alert('Nueva red de salud creada!');
-      setNuevaRedSalud('');
-      setSelectedRedSalud('');
-      const response = await axios.get(`http://localhost:3001/api/redesSalud/${selectedSede}`);
-      setRedesSalud(response.data);
+      setLoading(true);
+      const response = await axios.post(
+        "http://localhost:3001/api/establecimientos",
+        {
+          nombreEstablecimiento,
+          telefono,
+          clasificacion,
+          idRedSalud: selectedRedSalud,
+        }
+      );
+      alert(response.data.message || "✅ Establecimiento registrado correctamente.");
+      setNombreEstablecimiento("");
+      setTelefono("");
+      setClasificacion("");
+      setSelectedSede("");
+      setSelectedRedSalud("");
     } catch (error) {
-      console.error('Error creando la nueva red de salud:', error);
+      if (error.response && error.response.data.error) {
+        alert(error.response.data.error);
+      } else {
+        alert("❌ Error registrando el establecimiento. Inténtelo nuevamente.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleCreateRedSalud = async () => {
+    if (!nuevaRedSalud || !selectedSede) {
+      alert("Ingrese una nueva red de salud y seleccione una sede.");
+      return;
+    }
+
+    try {
+      await axios.post("http://localhost:3001/api/redesSalud", {
+        nombreRedSalud: nuevaRedSalud,
+        idSede: selectedSede,
+      });
+      alert("✅ Nueva red de salud creada.");
+      setNuevaRedSalud("");
+      const response = await axios.get(
+        `http://localhost:3001/api/redesSalud/${selectedSede}`
+      );
+      setRedesSalud(response.data);
+    } catch (error) {
+      console.error("Error creando la nueva red de salud:", error);
+      alert("❌ No se pudo crear la red de salud.");
+    }
+  };
+  const manejarCancelar = () => navigate("/lista-establecimientos");
+
+
   return (
     <Layout>
-    <div className="container mt-5">
-      <div className="card p-4">
-        <h2 className="text-center mb-4">Registrar Establecimiento</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-3">
-            <label>* Ingrese Nombre Del Establecimiento</label>
-            <input type="text" className="form-control" placeholder="Nombre" required />
-          </div>
-          <div className="row mb-3">
-          <div className="col-md-6">
-            <label>* Ingrese Número de Teléfono</label>
-            <input
-              type="tel"
-              className="form-control"
-              placeholder="Teléfono"
-              required
-              value={telefono} // Aquí debes agregar un estado para manejar el valor
-              onChange={(e) => {
-                const inputValue = e.target.value;
-                // Solo permitir dígitos
-                if (/^\d*$/.test(inputValue)) {
-                  setTelefono(inputValue); // Aquí necesitas definir el estado de telefono
-                }
-              }}
-            />
-          </div>
-            <div className="col-md-6">
-              <label>* SEDE</label>
-              <select className="form-control" value={selectedSede} onChange={handleSedeChange}>
-                <option value="">Seleccione una sede</option>
-                {sedes.map((sede) => (
-                  <option key={sede.idSede} value={sede.idSede}>
-                    {sede.nombreSede}
-                  </option>
-                ))}
-              </select>
+      <div className="form-wrapper">
+        <div className="form-card">
+          <h2 className="text-center mb-4">Registrar Establecimiento</h2>
+
+          <form onSubmit={handleSubmit}>
+            <div className="row">
+              <div className="col-md-12 mb-3">
+                <label className="form-label">* Nombre del Establecimiento</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Ej: Centro de Salud San Pedro"
+                  value={nombreEstablecimiento}
+                  onChange={(e) => setNombreEstablecimiento(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="col-md-6 mb-3">
+                <label className="form-label">* Teléfono</label>
+                <input
+                  type="tel"
+                  className="form-control"
+                  placeholder="Ej: 44556677"
+                  value={telefono}
+                  onChange={(e) => {
+                    const inputValue = e.target.value;
+                    if (/^\d*$/.test(inputValue)) setTelefono(inputValue);
+                  }}
+                  required
+                />
+              </div>
+
+              <div className="col-md-6 mb-3">
+                <label className="form-label">* Nivel E.S.</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Ej: Primario"
+                  value={clasificacion}
+                  onChange={(e) => setClasificacion(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="col-md-6 mb-3">
+                <label className="form-label">* Sede</label>
+                <select
+                  className="form-select"
+                  value={selectedSede}
+                  onChange={(e) => setSelectedSede(e.target.value)}
+                  required
+                >
+                  <option value="">Seleccione una sede</option>
+                  {sedes.map((sede) => (
+                    <option key={sede.idSede} value={sede.idSede}>
+                      {sede.nombreSede}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-md-6 mb-3">
+                <label className="form-label">* Red de Salud</label>
+                <select
+                  className="form-select"
+                  value={selectedRedSalud}
+                  onChange={(e) => setSelectedRedSalud(e.target.value)}
+                  required
+                >
+                  <option value="">Seleccione una red</option>
+                  {redesSalud.map((red) => (
+                    <option key={red.idRedSalud} value={red.idRedSalud}>
+                      {red.nombreRedSalud}
+                    </option>
+                  ))}
+                  <option value="nueva">+ Crear nueva red de salud</option>
+                </select>
+
+                {selectedRedSalud === "nueva" && (
+                  <div className="mt-3">
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Ingrese nueva red de salud"
+                      value={nuevaRedSalud}
+                      onChange={(e) => setNuevaRedSalud(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-success mt-2"
+                      onClick={handleCreateRedSalud}
+                    >
+                      Crear Red de Salud
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-          <div className="row mb-3">
-            <div className="col-md-6">
-              <label>* Red de Salud</label>
-              <select className="form-control" value={selectedRedSalud} onChange={handleRedSaludChange} required>
-                <option value="">Seleccione una red de salud</option>
-                {redesSalud.map((red) => (
-                  <option key={red.idRedSalud} value={red.idRedSalud}>
-                    {red.nombreRedSalud}
-                  </option>
-                ))}
-                <option value="nueva">Agregar nueva red de salud</option>
-              </select>
-              {selectedRedSalud === 'nueva' && (
-                <>
-                  <input
-                    type="text"
-                    className="form-control mt-2"
-                    placeholder="Ingrese nueva red de salud"
-                    value={nuevaRedSalud}
-                    onChange={handleNuevaRedSaludChange}
-                    required
-                  />
-                  {/* Botón para confirmar la creación de la nueva red de salud */}
-                  <button type="button" className="btn btn-success mt-2" onClick={handleCreateRedSalud}>
-                    Crear Nueva Red de Salud
-                  </button>
-                </>
-              )}
+
+            <div className="form-actions">
+              <button type="submit" className="btn btn-primary" disabled={loading}>
+                {loading ? "Registrando..." : "Registrar"}
+              </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary ms-2"
+                      onClick={manejarCancelar}
+                    >
+                      Cancelar
+                    </button>
             </div>
-            <div className="col-md-6">
-              <label>* Nivel E.S.</label>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Nivel E.S."
-                value={clasificacion}
-                onChange={handleClasificacionChange}
-                required
-              />
-            </div>
-          </div>
-          <div className="d-flex justify-content-center mt-4">
-            <button type="submit" className="btn btn-primary">
-              Registrar
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
-    </div>
     </Layout>
   );
 };

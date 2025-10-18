@@ -1,13 +1,13 @@
-import React from 'react';
-import VideoDownloader from '../components/VideoDownloader.js';
+import React from "react";
 import Layout from "../components/Layout";
+import VideoDownloaderSA from "../components/VideoDownloaderSA";
 
-const VideoList = () => {
+const VideoListSA = () => {
   return (
     <Layout>
-    <VideoDownloader/>
+      <VideoDownloaderSA />
     </Layout>
   );
 };
 
-export default VideoList;
+export default VideoListSA;

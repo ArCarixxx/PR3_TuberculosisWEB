@@ -1,30 +1,30 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import "./VideoDownloader.css";
 
-const VideoDownloader = () => {
+const VideoDownloaderAdmin = () => {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const userIdEstablecimiento = localStorage.getItem("userIdEstablecimiento");
+
   useEffect(() => {
-    // Llamada a la API para obtener la lista de videos
     const fetchVideos = async () => {
       try {
-        const role = localStorage.getItem("userRole");
-        const establecimiento = localStorage.getItem("userIdEstablecimiento");
-
-        const response = await fetch(`http://localhost:3001/api/videos?role=${role}&establecimiento=${establecimiento}`);
-
+        const response = await fetch(
+          `http://localhost:3001/api/videos?establecimiento=${userIdEstablecimiento}`
+        );
         const data = await response.json();
         setVideos(data);
-        setLoading(false);
       } catch (error) {
         console.error("Error al obtener los videos:", error);
+      } finally {
         setLoading(false);
       }
     };
 
     fetchVideos();
-  }, []);
+  }, [userIdEstablecimiento]);
 
   const downloadFile = (base64Data, fileName) => {
     const link = document.createElement("a");
@@ -36,59 +36,57 @@ const VideoDownloader = () => {
   };
 
   if (loading) {
-    return <p>Cargando videos...</p>;
+    return (
+      <div className="video-container text-center">
+        <h2>Cargando videos...</h2>
+        <div className="spinner"></div>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <h2>Lista de videos</h2>
+    <div className="video-container">
+      <h2 className="text-center mb-4">Videos de mi Establecimiento</h2>
+
       {videos.length > 0 ? (
-        <ul style={{ listStyle: "none", padding: 0 }}>
+        <div className="video-grid">
           {videos.map((video) => (
-            <li
-              key={video.id}
-              style={{
-                border: "1px solid #ccc",
-                borderRadius: "5px",
-                marginBottom: "10px",
-                padding: "10px",
-              }}
-            >
-              <h3>{video.name}</h3>
-              <Link className="nav-link" style={{
-                textDecoration: 'none', // Elimina el subrayado
-                color: 'blue', // Color típico de los enlaces
-                cursor: 'pointer', // Cambia el cursor a una mano
-                fontWeight: 'bold', // Negrita opcional
-              }} to={`/actualizar-paciente/${video.idPersona}`}>{video.nombrecompleto}</Link>
+            <div key={video.id} className="video-card">
+              <h4 className="video-title">{video.name}</h4>
+
               <p>
-                <strong>Establecimiento de salud: {video.nombreEstablecimiento}</strong>
+                <strong>Paciente:</strong>{" "}
+                <Link
+                  to={`/actualizar-paciente/${video.idPersona}`}
+                  className="patient-link"
+                >
+                  {video.nombrecompleto}
+                </Link>
               </p>
+
               <p>
                 <strong>Fecha de subida:</strong>{" "}
                 {new Date(video.uploadDate).toLocaleDateString("es-ES")}
               </p>
-              <button
-                onClick={() => downloadFile(video.base64, video.name)}
-                style={{
-                  backgroundColor: "#4CAF50",
-                  color: "white",
-                  border: "none",
-                  padding: "10px 20px",
-                  borderRadius: "5px",
-                  cursor: "pointer",
-                }}
-              >
-                Descargar
-              </button>
-            </li>
+
+              <div className="video-actions">
+                <button
+                  className="btn-download"
+                  onClick={() => downloadFile(video.base64, video.name)}
+                >
+                  Descargar
+                </button>
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       ) : (
-        <p>No hay videos disponibles.</p>
+        <div className="no-videos">
+          <p>No hay videos disponibles en su establecimiento.</p>
+        </div>
       )}
     </div>
   );
 };
 
-export default VideoDownloader;
+export default VideoDownloaderAdmin;

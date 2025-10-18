@@ -9,7 +9,6 @@ import Homesa from './pages/Homesa';
 import Login from './pages/Login'; 
 import ListaPersonalSalud from './pages/ListaPersonalSalud';
 import ListaPersonalSaludSA from './pages/ListaPersonalSaludSA';
-import RegistrarEstablecimiento from './pages/RegistrarEstablecimiento';
 import RegistrarEstablecimientoSA from './pages/RegistrarEstablecimientoSA';
 import RegistrarPersonalSalud from './pages/RegistrarPersonalSalud';
 import RegistrarPersonalSaludSA from './pages/RegistrarPersonalSaludSA';
@@ -47,12 +46,11 @@ function App() {
           <Route path="/Homesa" element={<Homesa />} />
           <Route path="/lista-personal-salud" element={<ListaPersonalSalud />} />
           <Route path="/lista-personal-saludSA" element={<ListaPersonalSaludSA />} />
-          <Route path="/registrar-establecimiento" element={<RegistrarEstablecimiento />} />
           <Route path="/registrar-establecimientoSA" element={<RegistrarEstablecimientoSA />} />
           <Route path="/registrar-personal-salud" element={<RegistrarPersonalSalud />} />
           <Route path="/registrar-personal-saludSA" element={<RegistrarPersonalSaludSA />} />
-          <Route path="/actualizar-personal-salud" element={<ActualizarPersonalSalud />} />
-          <Route path="/actualizar-personal-saludSA" element={<ActualizarPersonalSaludSA />} />
+          <Route path="/actualizar-personal-salud/:id" element={<ActualizarPersonalSalud />} />
+          <Route path="/actualizar-personal-saludSA/:id" element={<ActualizarPersonalSaludSA />} />
           <Route path="/seguimiento-tratamientos" element={<Tratamiento />} />
           <Route path="/seguimiento-tratamientosSA" element={<TratamientoSA />} />
           <Route path="/lista-pacientes" element={<Paciente />} />
