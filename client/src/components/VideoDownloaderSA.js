@@ -5,6 +5,7 @@ import "./VideoDownloader.css";
 const VideoDownloader = () => {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedVideo, setSelectedVideo] = useState(null);
 
   useEffect(() => {
     const fetchVideos = async () => {
@@ -29,7 +30,7 @@ const VideoDownloader = () => {
 
   const downloadFile = (base64Data, fileName) => {
     const link = document.createElement("a");
-    link.href = base64Data;
+    link.href = base64Data; // ✅ sin prefijo extra
     link.download = fileName;
     document.body.appendChild(link);
     link.click();
@@ -74,6 +75,14 @@ const VideoDownloader = () => {
                 <strong>Fecha de subida:</strong>{" "}
                 {new Date(video.uploadDate).toLocaleDateString("es-ES")}
               </p>
+
+              {/* ✅ Vista previa funcional */}
+              <div className="video-preview">
+                <video controls width="100%">
+                  <source src={video.base64} type="video/mp4" />
+                  Tu navegador no soporta video.
+                </video>
+              </div>
 
               <div className="video-actions">
                 <button

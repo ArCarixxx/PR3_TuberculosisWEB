@@ -5,14 +5,16 @@ import "./VideoDownloader.css";
 const VideoDownloaderAdmin = () => {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const userIdEstablecimiento = localStorage.getItem("userIdEstablecimiento");
+  const [selectedVideo, setSelectedVideo] = useState(null);
 
   useEffect(() => {
     const fetchVideos = async () => {
       try {
+        const role = localStorage.getItem("userRole"); // debería ser "Admin"
+        const establecimiento = localStorage.getItem("userIdEstablecimiento");
+
         const response = await fetch(
-          `http://localhost:3001/api/videos?establecimiento=${userIdEstablecimiento}`
+          `http://localhost:3001/api/videos?role=${role}&establecimiento=${establecimiento}`
         );
         const data = await response.json();
         setVideos(data);
@@ -24,7 +26,7 @@ const VideoDownloaderAdmin = () => {
     };
 
     fetchVideos();
-  }, [userIdEstablecimiento]);
+  }, []);
 
   const downloadFile = (base64Data, fileName) => {
     const link = document.createElement("a");
@@ -46,7 +48,7 @@ const VideoDownloaderAdmin = () => {
 
   return (
     <div className="video-container">
-      <h2 className="text-center mb-4">Videos de mi Establecimiento</h2>
+      <h2 className="text-center mb-4">Videos del Establecimiento</h2>
 
       {videos.length > 0 ? (
         <div className="video-grid">
@@ -69,6 +71,13 @@ const VideoDownloaderAdmin = () => {
                 {new Date(video.uploadDate).toLocaleDateString("es-ES")}
               </p>
 
+              <div className="video-preview">
+                <video controls width="100%">
+                  <source src={video.base64} type="video/mp4" />
+                  Tu navegador no soporta video.
+                </video>
+              </div>
+
               <div className="video-actions">
                 <button
                   className="btn-download"
@@ -82,7 +91,7 @@ const VideoDownloaderAdmin = () => {
         </div>
       ) : (
         <div className="no-videos">
-          <p>No hay videos disponibles en su establecimiento.</p>
+          <p>No hay videos disponibles en este establecimiento.</p>
         </div>
       )}
     </div>

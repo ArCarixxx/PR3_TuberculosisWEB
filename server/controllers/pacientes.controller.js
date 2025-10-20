@@ -3,7 +3,11 @@ const pool = require("../config/db");
 async function getPacienteById(req, res, next) {
   try {
     const { id } = req.params;
-    const [rows] = await pool.query("SELECT * FROM persona WHERE idPersona = ?", [id]);
+    const [rows] = await pool.query(`
+      SELECT p.*, e.nombreEstablecimiento
+      FROM persona p
+      INNER JOIN establecimientosalud e ON p.EstablecimientoSalud_idEstablecimientoSalud = e.idEstablecimientoSalud
+      WHERE idPersona = ?`, [id]);
     if (!rows.length) return res.status(404).json({ message: "Paciente no encontrado" });
     res.json(rows[0]);
   } catch (e) { next(e); }
