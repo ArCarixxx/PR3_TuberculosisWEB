@@ -34,7 +34,7 @@ const VideoDownloaderSA = () => {
   };
 
   useVideoNotifications((nuevoVideo) => {
-    alert(`📹 Nuevo video subido por ${nuevoVideo.nombrecompleto}`);
+    alert("📹 Nuevo video subido por un paciente");
     fetchVideos();
   });
 

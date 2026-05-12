@@ -36,7 +36,7 @@ const VideoDownloaderAdmin = () => {
 
   useVideoNotifications((nuevoVideo) => {
     if (String(nuevoVideo.idEstablecimientoSalud) === String(establecimiento)) {
-      alert(`📹 Nuevo video del paciente ${nuevoVideo.nombrecompleto}`);
+      alert("📹 Nuevo video subido por un paciente");
       fetchVideos();
     }
   });
