@@ -3,24 +3,40 @@ const pool = require("../config/db");
 // Crear establecimiento
 async function createEstablecimiento(req, res, next) {
   try {
-    const { nombreEstablecimiento, telefono, clasificacion, idRedSalud } = req.body;
+    const { nombreEstablecimiento, telefono, clasificacion, idRedSalud } =
+      req.body;
+
+    if (!nombreEstablecimiento || !telefono || !clasificacion || !idRedSalud) {
+      return res.status(400).json({
+        error: "Todos los campos obligatorios deben ser completados.",
+      });
+    }
 
     // Validar duplicado
     const [dup] = await pool.query(
-      "SELECT COUNT(*) AS count FROM establecimientosalud WHERE nombreEstablecimiento = ?",
+      "SELECT COUNT(*) AS count FROM establecimientosalud WHERE nombreEstablecimiento = ? AND estado = 1",
       [nombreEstablecimiento]
     );
-    if (dup[0].count > 0)
-      return res.status(400).json({ error: "El establecimiento ya existe." });
+
+    if (dup[0].count > 0) {
+      return res.status(400).json({
+        error: "El establecimiento ya existe.",
+      });
+    }
 
     const [result] = await pool.query(
-      "INSERT INTO establecimientosalud (nombreEstablecimiento, telefono, clasificacion, idRedSalud) VALUES (?, ?, ?, ?)",
+      `
+      INSERT INTO establecimientosalud 
+      (nombreEstablecimiento, telefono, clasificacion, idRedSalud) 
+      VALUES (?, ?, ?, ?)
+      `,
       [nombreEstablecimiento, telefono, clasificacion, idRedSalud]
     );
 
-    res
-      .status(201)
-      .json({ message: "✅ Establecimiento creado correctamente.", id: result.insertId });
+    res.status(201).json({
+      message: "✅ Establecimiento creado correctamente.",
+      id: result.insertId,
+    });
   } catch (e) {
     console.error("Error en createEstablecimiento:", e);
     next(e);
@@ -47,7 +63,7 @@ async function getEstablecimientoslista(req, res, next) {
 
     res.json(rows);
   } catch (e) {
-    console.error("Error en getEstablecimientos:", e);
+    console.error("Error en getEstablecimientoslista:", e);
     next(e);
   }
 }
@@ -56,6 +72,7 @@ async function getEstablecimientoslista(req, res, next) {
 async function getEstablecimientoById(req, res, next) {
   try {
     const { id } = req.params;
+
     const [rows] = await pool.query(
       `
       SELECT 
@@ -68,13 +85,16 @@ async function getEstablecimientoById(req, res, next) {
       FROM establecimientosalud es
       INNER JOIN redsalud rs ON es.idRedSalud = rs.idRedSalud
       INNER JOIN sede s ON rs.idSede = s.idSede
-      WHERE es.idEstablecimientoSalud = ?
+      WHERE es.idEstablecimientoSalud = ? AND es.estado = 1
       `,
       [id]
     );
 
-    if (!rows.length)
-      return res.status(404).json({ message: "Establecimiento no encontrado." });
+    if (!rows.length) {
+      return res.status(404).json({
+        error: "Establecimiento no encontrado.",
+      });
+    }
 
     res.json(rows[0]);
   } catch (e) {
@@ -82,26 +102,89 @@ async function getEstablecimientoById(req, res, next) {
     next(e);
   }
 }
+
 // Obtener todos los establecimientos activos
 async function getEstablecimientos(req, res, next) {
   try {
     const [rows] = await pool.query(
-      `SELECT 
-         e.idEstablecimientoSalud AS id,
-         e.nombreEstablecimiento AS nombre,
-         e.telefono,
-         e.clasificacion,
-         r.nombreRedSalud,
-         s.nombreSede
-       FROM establecimientosalud e
-       INNER JOIN redsalud r ON e.idRedSalud = r.idRedSalud
-       INNER JOIN sede s ON r.idSede = s.idSede
-       WHERE e.estado = 1
-       ORDER BY e.nombreEstablecimiento ASC`
+      `
+      SELECT 
+        e.idEstablecimientoSalud AS id,
+        e.nombreEstablecimiento AS nombre,
+        e.telefono,
+        e.clasificacion,
+        r.nombreRedSalud,
+        s.nombreSede
+      FROM establecimientosalud e
+      INNER JOIN redsalud r ON e.idRedSalud = r.idRedSalud
+      INNER JOIN sede s ON r.idSede = s.idSede
+      WHERE e.estado = 1
+      ORDER BY e.nombreEstablecimiento ASC
+      `
     );
+
     res.json(rows);
   } catch (e) {
     console.error("Error al obtener establecimientos:", e);
+    next(e);
+  }
+}
+
+// Actualizar solo teléfono y clasificación
+async function updateEstablecimiento(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { telefono, clasificacion } = req.body;
+
+    if (!telefono || !clasificacion) {
+      return res.status(400).json({
+        error: "El teléfono y la clasificación son obligatorios.",
+      });
+    }
+
+    if (!/^\d+$/.test(String(telefono))) {
+      return res.status(400).json({
+        error: "El teléfono solo puede contener números.",
+      });
+    }
+
+    const nivelesPermitidos = ["Primer Nivel", "Segundo Nivel", "Tercer Nivel"];
+
+    if (!nivelesPermitidos.includes(clasificacion)) {
+      return res.status(400).json({
+        error: "La clasificación seleccionada no es válida.",
+      });
+    }
+
+    const [exists] = await pool.query(
+      `
+      SELECT idEstablecimientoSalud 
+      FROM establecimientosalud 
+      WHERE idEstablecimientoSalud = ? AND estado = 1
+      `,
+      [id]
+    );
+
+    if (!exists.length) {
+      return res.status(404).json({
+        error: "Establecimiento no encontrado.",
+      });
+    }
+
+    await pool.query(
+      `
+      UPDATE establecimientosalud
+      SET telefono = ?, clasificacion = ?
+      WHERE idEstablecimientoSalud = ?
+      `,
+      [telefono, clasificacion, id]
+    );
+
+    res.json({
+      message: "✅ Establecimiento actualizado correctamente.",
+    });
+  } catch (e) {
+    console.error("Error en updateEstablecimiento:", e);
     next(e);
   }
 }
@@ -111,4 +194,5 @@ module.exports = {
   getEstablecimientos,
   getEstablecimientoById,
   getEstablecimientoslista,
+  updateEstablecimiento,
 };

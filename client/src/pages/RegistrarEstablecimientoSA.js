@@ -16,6 +16,13 @@ const RegistrarEstablecimiento = () => {
   const [nombreEstablecimiento, setNombreEstablecimiento] = useState("");
   const [loading, setLoading] = useState(false);
 
+
+    const niveles = [
+    "Primer Nivel",
+    "Segundo Nivel",
+    "Tercer Nivel",
+  ];
+
   useEffect(() => {
     const fetchSedes = async () => {
       try {
@@ -143,14 +150,19 @@ const RegistrarEstablecimiento = () => {
 
               <div className="col-md-6 mb-3">
                 <label className="form-label">* Nivel E.S.</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Ej: Primario"
+                <select
+                  className="form-select"
                   value={clasificacion}
                   onChange={(e) => setClasificacion(e.target.value)}
                   required
-                />
+                >
+                  <option value="">Seleccionar nivel</option>
+                  {niveles.map((nivel) => (
+                    <option key={nivel} value={nivel}>
+                      {nivel}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="col-md-6 mb-3">

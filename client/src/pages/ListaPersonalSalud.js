@@ -1,46 +1,87 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Layout from "../components/LayoutAdmin";
-import "./ListaPersonalSalud.css"; // Reutilizamos el mismo estilo del SuperAdmin
+import "./ListaPersonalSalud.css";
 
 const ListaPersonalSaludEstablecimiento = () => {
   const navigate = useNavigate();
+
   const [personalSalud, setPersonalSalud] = useState([]);
   const [busqueda, setBusqueda] = useState("");
+  const [filtroRol, setFiltroRol] = useState("");
 
-  const userRole = localStorage.getItem("userRole");
-  const userEstablecimiento = localStorage.getItem("userEstablecimiento");
-  const userIdEstablecimiento = localStorage.getItem("userIdEstablecimiento");
+  const userEstablecimiento =
+    localStorage.getItem("userEstablecimiento") || "Establecimiento";
 
-  // --- Obtener personal del establecimiento ---
+  const userIdEstablecimiento =
+    localStorage.getItem("userIdEstablecimiento");
+
+  // OBTENER PERSONAL
   const obtenerPersonalSalud = async () => {
     try {
       const response = await axios.get(
         "http://localhost:3001/api/personalSalud/establecimiento",
         {
-          params: { userIdEstablecimiento, search: busqueda },
+          params: {
+            userIdEstablecimiento,
+          },
         }
       );
+
       setPersonalSalud(response.data);
     } catch (error) {
-      console.error("Error al obtener el personal de salud:", error);
+      console.error("Error al obtener el personal:", error);
     }
   };
 
   useEffect(() => {
     obtenerPersonalSalud();
-  }, [busqueda]);
+  }, []);
 
-  // --- Acciones ---
+  // ROLES DISPONIBLES
+  const rolesDisponibles = useMemo(() => {
+    return [...new Set(personalSalud.map((p) => p.rol).filter(Boolean))].sort();
+  }, [personalSalud]);
+
+  // FILTRADO
+  const personalFiltrado = useMemo(() => {
+    const texto = busqueda.toLowerCase().trim();
+
+    return personalSalud.filter((p) => {
+      const nombreCompleto =
+        `${p.nombres} ${p.primerApellido} ${p.segundoApellido || ""}`.toLowerCase();
+
+      const coincideBusqueda =
+        nombreCompleto.includes(texto) ||
+        (p.CI || "").toLowerCase().includes(texto) ||
+        (p.numeroCelular || "").toLowerCase().includes(texto);
+
+      const coincideRol = filtroRol ? p.rol === filtroRol : true;
+
+      return coincideBusqueda && coincideRol;
+    });
+  }, [personalSalud, busqueda, filtroRol]);
+
+  // LIMPIAR FILTROS
+  const limpiarFiltros = () => {
+    setBusqueda("");
+    setFiltroRol("");
+  };
+
+  // EDITAR
   const handleEditar = (id) => {
     navigate(`/actualizar-personal-salud/${id}`);
   };
 
+  // ELIMINAR
   const handleEliminar = async (id) => {
     if (window.confirm("¿Seguro que desea eliminar este registro?")) {
       try {
-        await axios.delete(`http://localhost:3001/api/personalSalud/${id}`);
+        await axios.delete(
+          `http://localhost:3001/api/personalSalud/${id}`
+        );
+
         obtenerPersonalSalud();
       } catch (error) {
         console.error("Error al eliminar:", error);
@@ -48,119 +89,157 @@ const ListaPersonalSaludEstablecimiento = () => {
     }
   };
 
-  const personalFiltrado = personalSalud.filter((p) =>
-    `${p.nombres} ${p.primerApellido} ${p.segundoApellido || ""}`
-      .toLowerCase()
-      .includes(busqueda.toLowerCase())
-  );
+  // COLORES DE ROL
+  const getRolClass = (rol = "") => {
+    const rolLower = rol.toLowerCase();
+
+    if (rolLower.includes("admin")) return "rol-admin";
+    if (rolLower.includes("medico") || rolLower.includes("médico"))
+      return "rol-medico";
+    if (rolLower.includes("enfer")) return "rol-enfermera";
+
+    return "rol-default";
+  };
 
   return (
     <Layout>
-      <div className="personal-container">
-        <div className="header-section">
-          <h1>Lista de Personal de Salud</h1>
-          <p>
-            Establecimiento: <strong>{userEstablecimiento}</strong>
-          </p>
-        </div>
+      <div className="personal-page">
+        {/* HEADER */}
+        <div className="personal-header-simple">
+          <div>
+            <h1>Lista de Personal de Salud</h1>
 
-        {/* Buscador */}
-        <div className="search-bar">
-          <input
-            type="text"
-            placeholder="Buscar por nombre..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
-        </div>
+            <p>
+              Establecimiento:
+              <span className="establecimiento-title">
+                {userEstablecimiento}
+              </span>
+            </p>
+          </div>
 
-        {/* Tabla */}
-        <div className="table-container">
-          <table className="custom-table">
-            <thead>
-              <tr>
-                <th>Nombre Completo</th>
-                <th>Rol</th>
-                <th>Celular</th>
-                <th>CI.</th>
-                <th className="acciones-col">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {personalFiltrado.length > 0 ? (
-                personalFiltrado.map((p) => (
-                  <tr key={p.idPersona}>
-                    <td>{`${p.nombres} ${p.primerApellido} ${p.segundoApellido || ""}`}</td>
-                    <td>{p.rol}</td>
-                    <td>{p.numeroCelular}</td>
-                    <td>{p.CI}</td>
-                    <td className="acciones">
-                      <button
-                        className="icon-btn edit"
-                        onClick={() => handleEditar(p.idPersona)}
-                        title="Editar"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M12 20h9" />
-                          <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                        </svg>
-                      </button>
-
-                      <button
-                        className="icon-btn delete"
-                        onClick={() => handleEliminar(p.idPersona)}
-                        title="Eliminar"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6l-2 14H7L5 6" />
-                          <path d="M10 11v6" />
-                          <path d="M14 11v6" />
-                          <path d="M9 6V4h6v2" />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="4" className="no-data">
-                    No se encontraron registros
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Botones principales */}
-        <div className="actions">
           <button
-            className="btn-action add"
+            className="btn-add-top"
             onClick={() => navigate("/registrar-personal-salud")}
           >
-            Añadir Nuevo Personal
+            + Añadir personal
           </button>
+        </div>
+
+        {/* FILTROS */}
+        <div className="filters-card">
+          <div className="filters-row">
+            <div className="search-control">
+              <span className="search-icon">🔎</span>
+
+              <input
+                type="text"
+                placeholder="Buscar por nombre, CI o celular..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+              />
+            </div>
+
+            <select
+              className="filter-select"
+              value={filtroRol}
+              onChange={(e) => setFiltroRol(e.target.value)}
+            >
+              <option value="">Todos los roles</option>
+
+              {rolesDisponibles.map((rol) => (
+                <option key={rol} value={rol}>
+                  {rol}
+                </option>
+              ))}
+            </select>
+
+            <button
+              className="btn-clear-filters"
+              onClick={limpiarFiltros}
+            >
+              Limpiar
+            </button>
+          </div>
+
+          <div className="filters-summary">
+            Mostrando <strong>{personalFiltrado.length}</strong> de{" "}
+            <strong>{personalSalud.length}</strong> registros
+          </div>
+        </div>
+
+        {/* TABLA */}
+        <div className="table-card">
+          <div className="table-responsive">
+            <table className="custom-table">
+              <thead>
+                <tr>
+                  <th>Nombre completo</th>
+                  <th>Rol</th>
+                  <th>Celular</th>
+                  <th>CI</th>
+                  <th className="acciones-col">Acciones</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {personalFiltrado.length > 0 ? (
+                  personalFiltrado.map((p) => {
+                    const nombreCompleto = `${p.nombres} ${
+                      p.primerApellido
+                    } ${p.segundoApellido || ""}`.trim();
+
+                    return (
+                      <tr key={p.idPersona}>
+                        <td className="name-cell">
+                          <div className="mini-avatar">
+                            {p.nombres?.charAt(0)?.toUpperCase() || "U"}
+                          </div>
+
+                          <span>{nombreCompleto}</span>
+                        </td>
+
+                        <td>
+                          <span
+                            className={`role-badge ${getRolClass(p.rol)}`}
+                          >
+                            {p.rol}
+                          </span>
+                        </td>
+
+                        <td>{p.numeroCelular}</td>
+
+                        <td>{p.CI}</td>
+
+                        <td className="acciones">
+                          <button
+                            className="icon-btn edit"
+                            onClick={() => handleEditar(p.idPersona)}
+                            title="Editar"
+                          >
+                            ✎
+                          </button>
+
+                          <button
+                            className="icon-btn delete"
+                            onClick={() => handleEliminar(p.idPersona)}
+                            title="Eliminar"
+                          >
+                            🗑
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="no-data">
+                      No se encontraron registros con los filtros seleccionados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </Layout>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import Layout from "../components/LayoutPersonalSalud";
-import "./RegistrarPersonalSalud.css"; // usa el mismo estilo moderno
+import "./RegistrarPersonalSalud.css";
 
 const ActualizarPacienteAdmin = () => {
   const navigate = useNavigate();
@@ -20,14 +20,16 @@ const ActualizarPacienteAdmin = () => {
     sexo: "",
     direccion: "",
     CI: "",
+    complementoCI: "",
     EstablecimientoSalud_idEstablecimientoSalud: userIdEstablecimiento,
     idCriterioIngreso: "",
+    tipoExtrapulmonar: "",
   });
 
   const [criterios, setCriterios] = useState([]);
+  const [esExtrapulmonar, setEsExtrapulmonar] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // 🔹 Cargar datos del paciente y criterios
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -37,15 +39,37 @@ const ActualizarPacienteAdmin = () => {
         ]);
 
         const data = resPaciente.data;
+
         if (data.fechaNacimiento) {
           data.fechaNacimiento = new Date(data.fechaNacimiento)
             .toISOString()
             .split("T")[0];
         }
+
+        let ciBase = data.CI || "";
+        let complementoCI = "";
+
+        if (ciBase.includes("-")) {
+          const partes = ciBase.split("-");
+          ciBase = partes[0] || "";
+          complementoCI = partes[1] || "";
+        }
+
+        const criterioActual = resCrit.data.find(
+          (c) => c.idCriterioIngreso === data.idCriterioIngreso
+        );
+
+        if (criterioActual && criterioActual.tipo === "Extrapulmonar") {
+          setEsExtrapulmonar(true);
+        }
+
         setPaciente({
           ...data,
+          CI: ciBase,
+          complementoCI,
           EstablecimientoSalud_idEstablecimientoSalud: userIdEstablecimiento,
         });
+
         setCriterios(resCrit.data);
       } catch (error) {
         console.error("Error al cargar los datos:", error);
@@ -58,23 +82,89 @@ const ActualizarPacienteAdmin = () => {
     fetchData();
   }, [id, userIdEstablecimiento]);
 
-  // 🔹 Manejar cambios de formulario
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === "CI") {
+      const soloNumeros = value.replace(/\D/g, "");
+
+      setPaciente((prev) => ({
+        ...prev,
+        CI: soloNumeros,
+      }));
+
+      return;
+    }
+
+    if (name === "complementoCI") {
+      const complementoLimpio = value
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "")
+        .slice(0, 3);
+
+      setPaciente((prev) => ({
+        ...prev,
+        complementoCI: complementoLimpio,
+      }));
+
+      return;
+    }
+
     setPaciente((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "idCriterioIngreso") {
+      const criterioSeleccionado = criterios.find(
+        (c) => c.idCriterioIngreso.toString() === value
+      );
+
+      if (
+        criterioSeleccionado &&
+        criterioSeleccionado.tipo === "Extrapulmonar"
+      ) {
+        setEsExtrapulmonar(true);
+      } else {
+        setEsExtrapulmonar(false);
+
+        setPaciente((prev) => ({
+          ...prev,
+          tipoExtrapulmonar: "",
+        }));
+      }
+    }
   };
 
-  // 🔹 Actualizar paciente
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const ciCompleto = paciente.complementoCI
+      ? `${paciente.CI}-${paciente.complementoCI}`
+      : paciente.CI;
+
+    if (ciCompleto.length > 12) {
+      alert("El CI con complemento no puede superar los 12 caracteres.");
+      return;
+    }
 
     if (paciente.numeroCelular.length !== 8) {
       alert("El número de celular debe tener exactamente 8 dígitos.");
       return;
     }
 
+    if (esExtrapulmonar && !paciente.tipoExtrapulmonar.trim()) {
+      alert("Por favor, especifica el tipo de extrapulmonar.");
+      return;
+    }
+
     try {
-      await axios.put(`http://localhost:3001/api/pacientes/${id}`, paciente);
+      const dataToSend = {
+        ...paciente,
+        CI: ciCompleto,
+      };
+
+      delete dataToSend.complementoCI;
+
+      await axios.put(`http://localhost:3001/api/pacientes/${id}`, dataToSend);
+
       alert("✅ Paciente actualizado correctamente.");
       navigate("/lista-pacientesPS");
     } catch (error) {
@@ -131,13 +221,13 @@ const ActualizarPacienteAdmin = () => {
                   type="text"
                   name="segundoApellido"
                   className="form-control"
-                  value={paciente.segundoApellido}
+                  value={paciente.segundoApellido || ""}
                   onChange={handleChange}
                   placeholder="Ej: Gómez"
                 />
               </div>
 
-              <div className="col-md-6">
+              <div className="col-md-4">
                 <label className="form-label">* CI</label>
                 <input
                   type="text"
@@ -146,7 +236,21 @@ const ActualizarPacienteAdmin = () => {
                   value={paciente.CI}
                   onChange={handleChange}
                   placeholder="Ej: 12345678"
+                  maxLength={10}
                   required
+                />
+              </div>
+
+              <div className="col-md-2">
+                <label className="form-label">Complemento</label>
+                <input
+                  type="text"
+                  name="complementoCI"
+                  className="form-control"
+                  value={paciente.complementoCI || ""}
+                  onChange={handleChange}
+                  placeholder="Ej: 1A"
+                  maxLength={3}
                 />
               </div>
 
@@ -196,7 +300,7 @@ const ActualizarPacienteAdmin = () => {
                   type="text"
                   name="direccion"
                   className="form-control"
-                  value={paciente.direccion}
+                  value={paciente.direccion || ""}
                   onChange={handleChange}
                   placeholder="Ej: Av. América #123"
                 />
@@ -213,12 +317,30 @@ const ActualizarPacienteAdmin = () => {
                 >
                   <option value="">Seleccionar Criterio</option>
                   {criterios.map((c) => (
-                    <option key={c.idCriterioIngreso} value={c.idCriterioIngreso}>
+                    <option
+                      key={c.idCriterioIngreso}
+                      value={c.idCriterioIngreso}
+                    >
                       {`${c.tipo} ${c.subtipo ? `- ${c.subtipo}` : ""} (${c.estadoIngreso})`}
                     </option>
                   ))}
                 </select>
               </div>
+
+              {esExtrapulmonar && (
+                <div className="col-md-6">
+                  <label className="form-label">* Tipo de Extrapulmonar</label>
+                  <input
+                    type="text"
+                    name="tipoExtrapulmonar"
+                    className="form-control"
+                    placeholder="Ej: pleural, ganglionar..."
+                    value={paciente.tipoExtrapulmonar || ""}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              )}
 
               <div className="col-md-6">
                 <label className="form-label">Establecimiento de Salud</label>
@@ -235,6 +357,7 @@ const ActualizarPacienteAdmin = () => {
               <button type="submit" className="btn btn-primary me-2">
                 Actualizar
               </button>
+
               <button
                 type="button"
                 className="btn btn-secondary"

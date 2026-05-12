@@ -4,7 +4,7 @@ async function getTratamientos(req, res, next) {
   try {
     const { personaId } = req.params;
     const [rows] = await pool.query(
-      "SELECT medicamento, fechaInicio, fechaFinalizacion, cantDosis, intervaloTiempo FROM tratamiento WHERE Persona_idPersona = ?",
+      "SELECT idTratamiento, medicamento, fechaInicio, fechaFinalizacion, cantDosis, intervaloTiempo FROM tratamiento WHERE Persona_idPersona = ?",
       [personaId]
     );
     res.json(rows);

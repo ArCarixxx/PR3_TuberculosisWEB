@@ -67,3 +67,10 @@
 .btn-secondary:hover {
   background-color: #455a64;
 }
+
+.visible-label,
+.form-card .form-label {
+  color: #16324a !important;
+  font-weight: 750;
+  margin-bottom: 6px;
+}

@@ -36,19 +36,43 @@ async function getTransferenciaById(req, res, next) {
 async function listTransferencias(req, res, next) {
   try {
     const [rows] = await pool.query(`
-      SELECT t.idTransferencia,
-             e.idEstablecimientoSalud AS idEstablecimientoSaludOrigen,
-             e.nombreEstablecimiento AS establecimientoOrigen,
-             es.nombreEstablecimiento AS establecimientoDestino,
-             CONCAT(p.nombres, ' ', p.primerApellido, ' ', IFNULL(p.segundoApellido, '')) AS nombreCompleto,
-             t.motivo, t.observacion, t.documentoRef
+      SELECT 
+        t.idTransferencia,
+        t.fechaCreacion,
+
+        t.idEstablecimientoSaludOrigen,
+        t.idEstablecimientoSaludDestino,
+
+        e.nombreEstablecimiento AS establecimientoOrigen,
+        es.nombreEstablecimiento AS establecimientoDestino,
+
+        CONCAT(
+          p.nombres, ' ', 
+          p.primerApellido, ' ', 
+          IFNULL(p.segundoApellido, '')
+        ) AS nombreCompleto,
+
+        t.motivo,
+        t.observacion,
+        t.documentoRef
+
       FROM transferencia t
-      INNER JOIN establecimientosalud e  ON t.idEstablecimientoSaludOrigen  = e.idEstablecimientoSalud
-      INNER JOIN establecimientosalud es ON t.idEstablecimientoSaludDestino = es.idEstablecimientoSalud
-      INNER JOIN persona p               ON t.idPersona = p.idPersona
+      INNER JOIN establecimientosalud e  
+        ON t.idEstablecimientoSaludOrigen = e.idEstablecimientoSalud
+
+      INNER JOIN establecimientosalud es 
+        ON t.idEstablecimientoSaludDestino = es.idEstablecimientoSalud
+
+      INNER JOIN persona p               
+        ON t.idPersona = p.idPersona
+
+      ORDER BY t.fechaCreacion DESC
     `);
+
     res.json(rows);
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 }
 
 module.exports = { createTransferencia, getTransferenciaById, listTransferencias };

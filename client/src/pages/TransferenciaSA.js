@@ -4,6 +4,8 @@ import Layout from "../components/Layout";
 import "./Transferencia.css";
 
 const TransferenciaSA = () => {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     idEstablecimientoSaludOrigen: "",
     idEstablecimientoSaludDestino: "",
@@ -18,75 +20,100 @@ const TransferenciaSA = () => {
   const [personaSeleccionada, setPersonaSeleccionada] = useState(null);
   const [establecimientoOrigen, setEstablecimientoOrigen] = useState(null);
   const [establecimientoDestino, setEstablecimientoDestino] = useState(null);
-    const [pdfPreview, setPdfPreview] = useState(null); // 👈 NUEVO estado para vista previa
+  const [pdfPreview, setPdfPreview] = useState(null);
   const [statusMessage, setStatusMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate();
-
-  // 🔹 Cargar datos iniciales
   useEffect(() => {
     Promise.all([
-      fetch("http://localhost:3001/api/establecimientos").then((res) => res.json()),
+      fetch("http://localhost:3001/api/establecimientos").then((res) =>
+        res.json()
+      ),
       fetch("http://localhost:3001/api/pacientes").then((res) => res.json()),
     ])
       .then(([dataEst, dataPac]) => {
         setEstablecimientos(dataEst);
         setPersonas(dataPac);
       })
-      .catch((error) => console.error("Error cargando datos:", error));
+      .catch((error) => {
+        console.error("Error cargando datos:", error);
+        setStatusMessage("Error al cargar datos iniciales.");
+      });
   }, []);
 
-  // 🔹 Manejar cambios del formulario
   const handleChange = (e) => {
     const { name, value, files } = e.target;
 
     if (name === "documentoRef") {
       const file = files[0];
-      setFormData({ ...formData, documentoRef: file });
 
-      if (file && file.type === "application/pdf") {
-        const fileURL = URL.createObjectURL(file);
-        setPdfPreview(fileURL); // 👈 Generamos vista previa
-      } else {
+      if (!file) return;
+
+      if (file.type !== "application/pdf") {
+        alert("Solo se permite subir documentos PDF.");
         setPdfPreview(null);
+        setFormData((prev) => ({ ...prev, documentoRef: null }));
+        return;
       }
-    } else {
-      setFormData({ ...formData, [name]: value });
 
-      // Cuando cambia la persona
-      if (name === "persona_idPersona") {
-        const selectedPersona = personas.find(
-          (p) => p.idPersona.toString() === value.toString()
+      setFormData((prev) => ({ ...prev, documentoRef: file }));
+      setPdfPreview(URL.createObjectURL(file));
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "persona_idPersona") {
+      const selectedPersona = personas.find(
+        (p) => String(p.idPersona) === String(value)
+      );
+
+      setPersonaSeleccionada(selectedPersona || null);
+
+      if (selectedPersona) {
+        const estOrigen = establecimientos.find(
+          (e) => e.nombre === selectedPersona.nombreEstablecimiento
         );
-        setPersonaSeleccionada(selectedPersona);
 
-        if (selectedPersona) {
-          const estOrigen = establecimientos.find(
-            (e) => e.nombre === selectedPersona.nombreEstablecimiento
-          );
-          if (estOrigen) {
-            setFormData((prev) => ({
-              ...prev,
-              idEstablecimientoSaludOrigen: estOrigen.id.toString(),
-            }));
-            setEstablecimientoOrigen(estOrigen);
-          }
+        if (estOrigen) {
+          setFormData((prev) => ({
+            ...prev,
+            persona_idPersona: value,
+            idEstablecimientoSaludOrigen: String(estOrigen.id),
+          }));
+
+          setEstablecimientoOrigen(estOrigen);
         }
       }
+    }
 
-      // Cuando cambia el establecimiento de destino
-      if (name === "idEstablecimientoSaludDestino") {
-        const estDestino = establecimientos.find(
-          (e) => e.id.toString() === value.toString()
-        );
-        setEstablecimientoDestino(estDestino);
-      }
+    if (name === "idEstablecimientoSaludDestino") {
+      const estDestino = establecimientos.find(
+        (e) => String(e.id) === String(value)
+      );
+
+      setEstablecimientoDestino(estDestino || null);
     }
   };
 
-  // 🔹 Enviar formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.documentoRef) {
+      alert("Por favor seleccione un documento PDF de referencia.");
+      return;
+    }
+
+    if (
+      formData.idEstablecimientoSaludOrigen ===
+      formData.idEstablecimientoSaludDestino
+    ) {
+      alert("El establecimiento de origen y destino no pueden ser el mismo.");
+      return;
+    }
+
+    setLoading(true);
+    setStatusMessage("");
 
     const payload = {
       idEstablecimientoSaludOrigen: formData.idEstablecimientoSaludOrigen,
@@ -97,55 +124,60 @@ const TransferenciaSA = () => {
       documentoRef: null,
     };
 
-    if (formData.documentoRef) {
-      const file = formData.documentoRef;
-      const reader = new FileReader();
+    const reader = new FileReader();
 
-      reader.onloadend = async () => {
-        payload.documentoRef = reader.result.split(",")[1];
+    reader.onloadend = async () => {
+      payload.documentoRef = reader.result.split(",")[1];
 
-        try {
-          const response = await fetch("http://localhost:3001/api/transferencias", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
+      try {
+        const response = await fetch("http://localhost:3001/api/transferencias", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
-          if (response.ok) {
-            setStatusMessage("Registro exitoso");
-            setTimeout(() => navigate("/lista-transferenciasSA"), 2000);
-          } else {
-            const errorText = await response.text();
-            setStatusMessage(`Error: ${errorText}`);
-          }
-        } catch (error) {
-          console.error("Error al enviar:", error);
-          setStatusMessage("Error al enviar la transferencia.");
+        if (response.ok) {
+          setStatusMessage("Registro exitoso");
+          setTimeout(() => navigate("/lista-transferenciasSA"), 1500);
+        } else {
+          const errorText = await response.text();
+          setStatusMessage(`Error: ${errorText}`);
         }
-      };
+      } catch (error) {
+        console.error("Error al enviar:", error);
+        setStatusMessage("Error al enviar la transferencia.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      reader.readAsDataURL(file);
-    } else {
-      alert("Por favor seleccione un documento PDF de referencia.");
-    }
+    reader.readAsDataURL(formData.documentoRef);
   };
 
   return (
     <Layout>
-      <div className="transferencia-wrapper">
-        <h2 className="text-center mb-4">Registrar Transferencia</h2>
-        
-        <div className="transferencia-container">
-            <button
-                className="btn-action add"
-                onClick={() => navigate("/r/lista-transferenciasSA")}
-            >
-                Ver todas las Transferencias
-            </button> 
+      <div className="transfer-page">
+        <div className="transfer-header">
+          <div>
+            <h1>Registrar Transferencia</h1>
+            <p>
+              Registra el traslado de un paciente entre establecimientos de
+              salud.
+            </p>
+          </div>
+
+          <button
+            className="btn-transfer-secondary"
+            onClick={() => navigate("/lista-transferenciasSA")}
+          >
+            Ver transferencias
+          </button>
         </div>
-        <div className="transferencia-container">  
-          {/* --- FORMULARIO --- */}
-          <form onSubmit={handleSubmit} className="transfer-form">
+
+        <div className="transfer-grid">
+          <form onSubmit={handleSubmit} className="transfer-card">
+            <h3>Datos de transferencia</h3>
+
             <div className="form-group">
               <label>Paciente *</label>
               <select
@@ -182,11 +214,17 @@ const TransferenciaSA = () => {
                 required
               >
                 <option value="">Seleccione un establecimiento</option>
-                {establecimientos.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.nombre}
-                  </option>
-                ))}
+                {establecimientos
+                  .filter(
+                    (e) =>
+                      String(e.id) !==
+                      String(formData.idEstablecimientoSaludOrigen)
+                  )
+                  .map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.nombre}
+                    </option>
+                  ))}
               </select>
             </div>
 
@@ -203,7 +241,9 @@ const TransferenciaSA = () => {
                 <option value="Emergencia">Emergencia</option>
                 <option value="Consulta Externa">Consulta Externa</option>
                 <option value="Interconsulta">Interconsulta</option>
-                <option value="Servicio/Especialidad">Servicio/Especialidad</option>
+                <option value="Servicio/Especialidad">
+                  Servicio/Especialidad
+                </option>
                 <option value="Telesalud">Telesalud</option>
               </select>
             </div>
@@ -218,21 +258,24 @@ const TransferenciaSA = () => {
                 maxLength="200"
                 placeholder="Máximo 200 caracteres..."
               ></textarea>
-              <small>{200 - formData.Observacion.length} caracteres restantes</small>
+              <small>
+                {200 - formData.Observacion.length} caracteres restantes
+              </small>
             </div>
 
             <div className="form-group">
-              <label>Documento de Transferencia (PDF)</label>
+              <label>Documento de Transferencia PDF *</label>
               <input
                 type="file"
                 name="documentoRef"
                 onChange={handleChange}
                 accept=".pdf"
+                required
               />
             </div>
 
-            <button type="submit" className="btn-primary mt-2">
-              Registrar Transferencia
+            <button type="submit" className="btn-transfer-primary" disabled={loading}>
+              {loading ? "Registrando..." : "Registrar Transferencia"}
             </button>
 
             {statusMessage && (
@@ -246,16 +289,20 @@ const TransferenciaSA = () => {
             )}
           </form>
 
-          {/* --- DETALLE --- */}
-          <div className="transfer-detail">
-            <h4>Detalles de la Transferencia</h4>
+          <div className="transfer-detail-card">
+            <h3>Vista previa de la transferencia</h3>
 
             <div className="detail-section">
               <h5>Paciente</h5>
               <p><strong>Nombre:</strong> {personaSeleccionada?.nombreCompleto || "N/A"}</p>
               <p><strong>CI:</strong> {personaSeleccionada?.CI || "N/A"}</p>
               <p><strong>Sexo:</strong> {personaSeleccionada?.sexo || "N/A"}</p>
-              <p><strong>Fecha Nacimiento:</strong> {personaSeleccionada?.fechaNacimiento ? new Date(personaSeleccionada.fechaNacimiento).toLocaleDateString() : "N/A"}</p>
+              <p>
+                <strong>Fecha Nacimiento:</strong>{" "}
+                {personaSeleccionada?.fechaNacimiento
+                  ? new Date(personaSeleccionada.fechaNacimiento).toLocaleDateString("es-BO")
+                  : "N/A"}
+              </p>
             </div>
 
             <div className="detail-section">
@@ -271,11 +318,10 @@ const TransferenciaSA = () => {
               <p><strong>Clasificación:</strong> {establecimientoDestino?.clasificacion || "N/A"}</p>
               <p><strong>Teléfono:</strong> {establecimientoDestino?.telefono || "N/A"}</p>
             </div>
-            
-            {/* 👇 NUEVA SECCIÓN DE VISTA PREVIA DEL PDF */}
+
             {pdfPreview && (
               <div className="detail-section pdf-preview">
-                <h5>Vista previa del documento</h5>
+                <h5>Documento seleccionado</h5>
                 <iframe
                   src={pdfPreview}
                   title="Vista previa PDF"

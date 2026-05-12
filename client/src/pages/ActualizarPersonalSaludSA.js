@@ -2,99 +2,202 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import Layout from "../components/Layout";
-import "./RegistrarPersonalSalud.css"; // reutilizamos el mismo estilo elegante
+import "./RegistrarPersonalSalud.css";
 
 const ActualizarPersonalSalud = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  const [establecimientos, setEstablecimientos] = useState([]);
   const [formData, setFormData] = useState({
     nombres: "",
     primerApellido: "",
     segundoApellido: "",
+    CI: "",
+    complementoCI: "",
     numeroCelular: "",
     rol: "",
-    CI: "",
     EstablecimientoSalud_idEstablecimientoSalud: "",
   });
-  const [cargando, setCargando] = useState(true);
 
-  // --- Obtener datos iniciales ---
-  useEffect(() => {
-    const obtenerDatos = async () => {
-      try {
-        const resPersonal = await axios.get("http://localhost:3001/api/personalSalud");
-        const personal = resPersonal.data.find((p) => p.idPersona === parseInt(id));
+  const [establecimientos, setEstablecimientos] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-        if (!personal) {
-          alert("No se encontró el personal de salud.");
-          navigate("/lista-personal-saludSA");
-          return;
-        }
+  const separarCI = (ciCompleto = "") => {
+    if (ciCompleto.includes("-")) {
+      const [ciBase, complemento] = ciCompleto.split("-");
+      return {
+        CI: ciBase || "",
+        complementoCI: complemento || "",
+      };
+    }
 
-        const establecimientoId =
-          personal.EstablecimientoSalud_idEstablecimientoSalud ||
-          personal.idEstablecimientoSalud ||
-          (personal.EstablecimientoSalud &&
-            personal.EstablecimientoSalud.idEstablecimientoSalud) ||
-          "";
-
-        setFormData({
-          nombres: personal.nombres || "",
-          primerApellido: personal.primerApellido || "",
-          segundoApellido: personal.segundoApellido || "",
-          numeroCelular: personal.numeroCelular || "",
-          rol: personal.rol || "",
-          CI: personal.CI || "",
-          EstablecimientoSalud_idEstablecimientoSalud: establecimientoId,
-        });
-
-        const resEst = await axios.get("http://localhost:3001/api/establecimientos");
-        setEstablecimientos(resEst.data);
-      } catch (error) {
-        console.error("Error al obtener datos:", error);
-      } finally {
-        setCargando(false);
-      }
+    return {
+      CI: ciCompleto || "",
+      complementoCI: "",
     };
-
-    obtenerDatos();
-  }, [id, navigate]);
-
-  // --- Manejar cambios en inputs ---
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
   };
 
-  // --- Guardar cambios ---
-  const actualizarPersonalSalud = async () => {
+  useEffect(() => {
+  const obtenerDatos = async () => {
     try {
-      await axios.put(`http://localhost:3001/api/personalSalud/${id}`, formData);
-      alert("✅ Personal de salud actualizado correctamente.");
-      navigate("/lista-personal-saludSA");
+      const [personalRes, establecimientosRes] = await Promise.all([
+        axios.get("http://localhost:3001/api/personalSalud"),
+        axios.get("http://localhost:3001/api/establecimientos"),
+      ]);
+
+      const listaPersonal = personalRes.data;
+
+      const personal = listaPersonal.find(
+        (p) => String(p.idPersona) === String(id)
+      );
+
+      if (!personal) {
+        setError("No se encontró el personal de salud seleccionado.");
+        return;
+      }
+
+      const ciSeparado = separarCI(personal.CI);
+
+      setFormData({
+        nombres: personal.nombres || "",
+        primerApellido: personal.primerApellido || "",
+        segundoApellido: personal.segundoApellido || "",
+        CI: ciSeparado.CI,
+        complementoCI: ciSeparado.complementoCI,
+        numeroCelular: personal.numeroCelular || "",
+        rol: personal.rol || "",
+        EstablecimientoSalud_idEstablecimientoSalud:
+          personal.EstablecimientoSalud_idEstablecimientoSalud ||
+          personal.idEstablecimientoSalud ||
+          personal.idEstablecimiento ||
+          "",
+      });
+
+      setEstablecimientos(establecimientosRes.data);
     } catch (error) {
-      console.error("Error al actualizar:", error);
-      alert("❌ No se pudo actualizar el registro.");
+      console.error("Error al cargar datos:", error);
+      setError("No se pudieron cargar los datos del personal de salud.");
     }
   };
 
-  // --- Cancelar ---
-  const manejarCancelar = () => navigate("/lista-personal-saludSA");
+  obtenerDatos();
+}, [id]);
 
-  if (cargando) {
-    return (
-      <Layout>
-        <div className="container text-center mt-5">
-          <h5>Cargando datos del personal...</h5>
-        </div>
-      </Layout>
-    );
-  }
+  const handleChange = (e) => {
+    const { id, value } = e.target;
+
+    if (id === "CI") {
+      const soloNumeros = value.replace(/\D/g, "");
+      setFormData({
+        ...formData,
+        CI: soloNumeros,
+      });
+      return;
+    }
+
+    if (id === "complementoCI") {
+      const complementoLimpio = value
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "")
+        .slice(0, 3);
+
+      setFormData({
+        ...formData,
+        complementoCI: complementoLimpio,
+      });
+      return;
+    }
+
+    if (id === "numeroCelular") {
+      const soloNumeros = value.replace(/\D/g, "");
+      setFormData({
+        ...formData,
+        numeroCelular: soloNumeros,
+      });
+      return;
+    }
+
+    setFormData({
+      ...formData,
+      [id]: value,
+    });
+  };
+
+  const construirCICompleto = () => {
+    const ciBase = formData.CI.trim();
+    const complemento = formData.complementoCI.trim();
+
+    return complemento ? `${ciBase}-${complemento}` : ciBase;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    const ciCompleto = construirCICompleto();
+
+    if (!formData.CI.trim()) {
+      setError("El número de CI es obligatorio.");
+      setLoading(false);
+      return;
+    }
+
+    if (!/^\d+$/.test(formData.CI)) {
+      setError("El número de CI solo puede contener números.");
+      setLoading(false);
+      return;
+    }
+
+    if (ciCompleto.length > 12) {
+      setError("El CI con complemento no puede superar los 12 caracteres.");
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.numeroCelular.trim()) {
+      setError("El número de celular es obligatorio.");
+      setLoading(false);
+      return;
+    }
+
+    if (!/^\d+$/.test(formData.numeroCelular)) {
+      setError("El número de celular solo puede contener números.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const dataToSend = {
+        ...formData,
+        CI: ciCompleto,
+      };
+
+      delete dataToSend.complementoCI;
+
+      await axios.put(
+        `http://localhost:3001/api/personalSalud/${id}`,
+        dataToSend
+      );
+
+      alert("✅ Personal de salud actualizado correctamente.");
+
+      navigate("/lista-personal-saludSA");
+    } catch (error) {
+      if (error.response && error.response.data.error) {
+        setError(error.response.data.error);
+      } else {
+        setError("Hubo un error al actualizar el personal de salud.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    navigate("/lista-personal-saludSA");
+  };
 
   return (
     <Layout>
@@ -102,90 +205,123 @@ const ActualizarPersonalSalud = () => {
         <div className="form-card">
           <h2 className="text-center mb-4">Actualizar Personal de Salud</h2>
 
-          <form>
+          {error && (
+            <div className="alert alert-danger text-center">{error}</div>
+          )}
+
+          <form onSubmit={handleSubmit}>
             <div className="row">
               <div className="col-md-6 mb-3">
-                <label className="form-label">Nombres:</label>
+                <label className="form-label">* Nombres</label>
                 <input
                   type="text"
                   className="form-control"
-                  name="nombres"
+                  id="nombres"
+                  placeholder="Ej: Juan Carlos"
                   value={formData.nombres}
-                  onChange={handleInputChange}
+                  onChange={handleChange}
+                  required
                 />
               </div>
 
               <div className="col-md-6 mb-3">
-                <label className="form-label">Primer Apellido:</label>
+                <label className="form-label">* Primer Apellido</label>
                 <input
                   type="text"
                   className="form-control"
-                  name="primerApellido"
+                  id="primerApellido"
+                  placeholder="Ej: Pérez"
                   value={formData.primerApellido}
-                  onChange={handleInputChange}
+                  onChange={handleChange}
+                  required
                 />
               </div>
 
               <div className="col-md-6 mb-3">
-                <label className="form-label">Segundo Apellido:</label>
+                <label className="form-label">Segundo Apellido</label>
                 <input
                   type="text"
                   className="form-control"
-                  name="segundoApellido"
+                  id="segundoApellido"
+                  placeholder="Ej: Gómez"
                   value={formData.segundoApellido}
-                  onChange={handleInputChange}
+                  onChange={handleChange}
                 />
               </div>
 
-              <div className="col-md-6 mb-3">
-                <label className="form-label">CI:</label>
+              <div className="col-md-4 mb-3">
+                <label className="form-label">* CI</label>
                 <input
                   type="text"
                   className="form-control"
-                  name="CI"
+                  id="CI"
+                  placeholder="Ej: 12345678"
                   value={formData.CI}
-                  onChange={handleInputChange}
+                  onChange={handleChange}
+                  maxLength={10}
+                  required
                 />
               </div>
 
-              <div className="col-md-6 mb-3">
-                <label className="form-label">Número de Celular:</label>
+              <div className="col-md-2 mb-3">
+                <label className="form-label">Complemento</label>
                 <input
                   type="text"
                   className="form-control"
-                  name="numeroCelular"
-                  value={formData.numeroCelular}
-                  onChange={handleInputChange}
+                  id="complementoCI"
+                  placeholder="Ej: 1A"
+                  value={formData.complementoCI}
+                  onChange={handleChange}
+                  maxLength={3}
                 />
               </div>
 
               <div className="col-md-6 mb-3">
-                <label className="form-label">Rol:</label>
+                <label className="form-label">* Número de Celular</label>
+                <input
+                  type="tel"
+                  className="form-control"
+                  id="numeroCelular"
+                  placeholder="Ej: 76543210"
+                  value={formData.numeroCelular}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="col-md-6 mb-3">
+                <label className="form-label">* Rol</label>
                 <select
                   className="form-select"
-                  name="rol"
+                  id="rol"
                   value={formData.rol}
-                  onChange={handleInputChange}
+                  onChange={handleChange}
+                  required
                 >
-                  <option value="">Selecciona un rol</option>
+                  <option value="">Seleccionar Rol</option>
                   <option value="Medico">Médico</option>
                   <option value="Enfermero">Enfermero/a</option>
-                  <option value="Administrador">Administrador/a</option>
+                  <option value="Administrador">Administrador</option>
                 </select>
               </div>
 
               <div className="col-md-12 mb-3">
-                <label className="form-label">Establecimiento:</label>
+                <label className="form-label">* Establecimiento de Salud</label>
                 <select
                   className="form-select"
-                  name="EstablecimientoSalud_idEstablecimientoSalud"
+                  id="EstablecimientoSalud_idEstablecimientoSalud"
                   value={formData.EstablecimientoSalud_idEstablecimientoSalud}
-                  onChange={handleInputChange}
+                  onChange={handleChange}
+                  required
                 >
-                  <option value="">Selecciona un establecimiento</option>
+                  <option value="">Seleccionar Establecimiento</option>
+
                   {establecimientos.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.nombre}
+                    <option
+                      key={e.idEstablecimientoSalud || e.id}
+                      value={e.idEstablecimientoSalud || e.id}
+                    >
+                      {e.nombreEstablecimiento || e.nombre}
                     </option>
                   ))}
                 </select>
@@ -194,16 +330,17 @@ const ActualizarPersonalSalud = () => {
 
             <div className="form-actions">
               <button
-                type="button"
+                type="submit"
                 className="btn btn-primary"
-                onClick={actualizarPersonalSalud}
+                disabled={loading}
               >
-                Actualizar
+                {loading ? "Actualizando..." : "Actualizar"}
               </button>
+
               <button
                 type="button"
                 className="btn btn-secondary ms-2"
-                onClick={manejarCancelar}
+                onClick={handleCancel}
               >
                 Cancelar
               </button>

@@ -3,6 +3,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min'; 
 
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+
 import Homea from './pages/Homea';
 import Homeps from './pages/Homeps';
 import Homesa from './pages/Homesa';
@@ -35,12 +36,19 @@ import ListasTransferenciasPS from './pages/ListaTransferenciasPS';
 import VideoList from './pages/VideoList';
 import VideoListSA from './pages/VideoListSA';
 import VideoListPS from './pages/VideoListPS';
+import ActualizarEstablecimientoSA from './pages/ActualizarEstablecimientoSA';
+
+// 🔔 ESTE componente escucha notificaciones globales
+import GlobalNotifications from "./components/GlobalNotifications";
 
 function App() {
   return (
-    <Router>
+    <>
+
+      <Router>
+        <GlobalNotifications />
         <Routes>
-        <Route path="/" element={<Login />} />
+          <Route path="/" element={<Login />} />
           <Route path="/Homea" element={<Homea />} />
           <Route path="/Homeps" element={<Homeps />} />
           <Route path="/Homesa" element={<Homesa />} />
@@ -72,8 +80,10 @@ function App() {
           <Route path="/videos" element={<VideoList />} />
           <Route path="/videosSA" element={<VideoListSA />} />
           <Route path="/videosPS" element={<VideoListPS />} />
+          <Route path="/actualizar-establecimientoSA/:id" element={<ActualizarEstablecimientoSA />} />
         </Routes>
-    </Router>
+      </Router>
+    </>
   );
 }
 

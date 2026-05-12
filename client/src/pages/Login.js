@@ -35,6 +35,12 @@ const Login = () => {
           enfermero: "/homeps",
         };
         navigate(roleRoutes[rol.toLowerCase()] || "/");
+
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("userNombre", data.nombreCorto);
+        localStorage.setItem("userRol", data.rol);
+        localStorage.setItem("userNombreCompleto", data.nombreCompleto);
+        localStorage.setItem("userIdPersona", response.data.idPersona); 
       } else {
         setError(data.error || "Credenciales incorrectas");
       }

@@ -3,19 +3,57 @@ const pool = require("../config/db");
 async function login(req, res, next) {
   try {
     const { nombreUsuario, contrasenia } = req.query;
-    if (!nombreUsuario || !contrasenia) return res.status(400).json({ error: "Usuario y contraseña obligatorios" });
-    const [rows] = await pool.query(`
-      SELECT p.idPersona AS Nro, ps.usuario AS Credencial, ps.contrasenia AS ClaveSegura, ps.rol AS NivelAcceso,
-             p.EstablecimientoSalud_idEstablecimientoSalud AS idEstablecimiento, e.nombreEstablecimiento AS Establecimiento
+
+    if (!nombreUsuario || !contrasenia) {
+      return res
+        .status(400)
+        .json({ error: "Usuario y contraseña obligatorios" });
+    }
+
+    const [rows] = await pool.query(
+      `
+      SELECT 
+        p.idPersona AS Nro,
+        p.nombres AS Nombres,
+        p.primerApellido AS PrimerApellido,
+        p.segundoApellido AS SegundoApellido,
+        ps.usuario AS Credencial,
+        ps.contrasenia AS ClaveSegura,
+        ps.rol AS NivelAcceso,
+        p.EstablecimientoSalud_idEstablecimientoSalud AS idEstablecimiento,
+        e.nombreEstablecimiento AS Establecimiento
       FROM personalsalud ps
-      INNER JOIN persona p ON ps.persona_idPersona = p.idPersona
-      INNER JOIN establecimientosalud e ON p.EstablecimientoSalud_idEstablecimientoSalud = e.idEstablecimientoSalud
+      INNER JOIN persona p 
+        ON ps.persona_idPersona = p.idPersona
+      INNER JOIN establecimientosalud e 
+        ON p.EstablecimientoSalud_idEstablecimientoSalud = e.idEstablecimientoSalud
       WHERE ps.usuario = ? AND ps.contrasenia = ?
-    `, [nombreUsuario, contrasenia]);
-    if (!rows.length) return res.status(401).json({ error: "Credenciales incorrectas" });
+      `,
+      [nombreUsuario, contrasenia]
+    );
+
+    if (!rows.length) {
+      return res.status(401).json({ error: "Credenciales incorrectas" });
+    }
+
     const r = rows[0];
-    res.json({ idPersona: r.Nro, usuario: r.Credencial, rol: r.NivelAcceso, idEstablecimiento: r.idEstablecimiento, establecimiento: r.Establecimiento });
-  } catch (e) { next(e); }
+
+    const nombreCompleto = `${r.Nombres} ${r.PrimerApellido}${
+      r.SegundoApellido ? ` ${r.SegundoApellido}` : ""
+    }`.trim();
+    const nombreCorto = `${r.Nombres.split(" ")[0]} ${r.PrimerApellido}`.trim();
+
+    res.json({
+      idPersona: r.Nro,
+      usuario: r.Credencial,
+      nombreCompleto, nombreCorto,
+      rol: r.NivelAcceso,
+      idEstablecimiento: r.idEstablecimiento,
+      establecimiento: r.Establecimiento,
+    });
+  } catch (e) {
+    next(e);
+  }
 }
 
 async function loginMobile(req, res, next) {

@@ -1,178 +1,352 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Link, useNavigate } from "react-router-dom";
 import Layout from "../components/LayoutPersonalSalud";
-import "./ListaPersonalSalud.css"; // Reutilizamos el mismo CSS moderno
+import "./ListaPersonalSalud.css";
 
 const ListaPacientesAdmin = () => {
-  const [pacientes, setPacientes] = useState([]);
-  const [busqueda, setBusqueda] = useState("");
   const navigate = useNavigate();
 
-  const userRole = localStorage.getItem("userRole");
-  const userEstablecimiento = localStorage.getItem("userEstablecimiento");
+  const userEstablecimiento =
+    localStorage.getItem("userEstablecimiento") || "Establecimiento";
+
   const userIdEstablecimiento = localStorage.getItem("userIdEstablecimiento");
 
-  console.log(
-    `Rol: ${userRole}, Establecimiento: ${userEstablecimiento}, IdEstablecimiento: ${userIdEstablecimiento}`
-  );
+  const [pacientes, setPacientes] = useState([]);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroCriterio, setFiltroCriterio] = useState("");
+  const [filtroSexo, setFiltroSexo] = useState("");
+  const [filtroTipoExtra, setFiltroTipoExtra] = useState("");
+  const [filtroEdad, setFiltroEdad] = useState("");
+
+  const obtenerPacientes = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost:3001/api/pacientesEst?userIdEstablecimiento=${userIdEstablecimiento}`
+      );
+
+      setPacientes(response.data);
+    } catch (error) {
+      console.error("Error al obtener pacientes:", error);
+    }
+  };
 
   useEffect(() => {
-    const obtenerPacientes = async () => {
-      try {
-        const response = await axios.get(
-          `http://localhost:3001/api/pacientesEst`,
-          { params: { userIdEstablecimiento } }
-        );
-        setPacientes(response.data);
-      } catch (error) {
-        console.error("Error al cargar los pacientes:", error);
-        alert("No se pudieron cargar los pacientes.");
-      }
-    };
     obtenerPacientes();
   }, [userIdEstablecimiento]);
 
-  const desactivarPaciente = async (id) => {
-    if (!window.confirm("¿Seguro que deseas eliminar este paciente?")) return;
-
-    try {
-      await axios.put(`http://localhost:3001/api/pacientesDelete/${id}/estado`);
-      alert("✅ Paciente eliminado correctamente");
-      setPacientes((prev) => prev.filter((p) => p.idPersona !== id));
-    } catch (error) {
-      console.error("Error al eliminar paciente:", error);
-      alert("❌ No se pudo eliminar el paciente.");
-    }
+  const formatDate = (date) => {
+    if (!date) return "Sin registro";
+    return new Date(date).toLocaleDateString("es-BO");
   };
 
-  const handleActualizarPaciente = (id) => {
+  const calcularEdad = (fechaNacimiento) => {
+    if (!fechaNacimiento) return null;
+
+    const nacimiento = new Date(fechaNacimiento);
+    const hoy = new Date();
+
+    let edad = hoy.getFullYear() - nacimiento.getFullYear();
+    const mes = hoy.getMonth() - nacimiento.getMonth();
+
+    if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+      edad--;
+    }
+
+    return edad;
+  };
+
+  const criteriosDisponibles = useMemo(() => {
+    return [
+      ...new Set(pacientes.map((p) => p.criterioIngreso).filter(Boolean)),
+    ].sort();
+  }, [pacientes]);
+
+  const sexosDisponibles = useMemo(() => {
+    return [...new Set(pacientes.map((p) => p.sexo).filter(Boolean))].sort();
+  }, [pacientes]);
+
+  const tiposExtraDisponibles = useMemo(() => {
+    return [
+      ...new Set(pacientes.map((p) => p.tipoExtrapulmonar).filter(Boolean)),
+    ].sort();
+  }, [pacientes]);
+
+  const criterioEsExtrapulmonar = filtroCriterio
+    .toLowerCase()
+    .includes("extrapulmonar");
+
+  const pacientesFiltrados = useMemo(() => {
+    const texto = busqueda.toLowerCase().trim();
+
+    return pacientes.filter((p) => {
+      const nombreCompleto = (p.nombreCompleto || "").toLowerCase();
+      const ci = (p.CI || "").toLowerCase();
+
+      const coincideBusqueda =
+        nombreCompleto.includes(texto) || ci.includes(texto);
+
+      const coincideCriterio = filtroCriterio
+        ? p.criterioIngreso === filtroCriterio
+        : true;
+
+      const coincideSexo = filtroSexo ? p.sexo === filtroSexo : true;
+
+      const coincideTipoExtra =
+        criterioEsExtrapulmonar && filtroTipoExtra
+          ? p.tipoExtrapulmonar === filtroTipoExtra
+          : true;
+
+      const edad = calcularEdad(p.fechaNacimiento);
+
+      let coincideEdad = true;
+
+      if (filtroEdad === "menor") {
+        coincideEdad = edad !== null && edad < 18;
+      } else if (filtroEdad === "adulto") {
+        coincideEdad = edad !== null && edad >= 18 && edad < 60;
+      } else if (filtroEdad === "adultoMayor") {
+        coincideEdad = edad !== null && edad >= 60;
+      }
+
+      return (
+        coincideBusqueda &&
+        coincideCriterio &&
+        coincideSexo &&
+        coincideTipoExtra &&
+        coincideEdad
+      );
+    });
+  }, [
+    pacientes,
+    busqueda,
+    filtroCriterio,
+    filtroSexo,
+    filtroTipoExtra,
+    filtroEdad,
+    criterioEsExtrapulmonar,
+  ]);
+
+  const limpiarFiltros = () => {
+    setBusqueda("");
+    setFiltroCriterio("");
+    setFiltroSexo("");
+    setFiltroTipoExtra("");
+    setFiltroEdad("");
+  };
+
+  const handleCriterioChange = (e) => {
+    setFiltroCriterio(e.target.value);
+    setFiltroTipoExtra("");
+  };
+
+  const handleEditar = (id) => {
     navigate(`/actualizar-pacientePS/${id}`);
   };
 
-  const formatearFecha = (fecha) => {
+  const handleEliminar = async (id) => {
+    const confirmar = window.confirm(
+      "¿Seguro que desea eliminar este paciente?"
+    );
+
+    if (!confirmar) return;
+
     try {
-      return new Date(fecha).toLocaleDateString("es-ES");
-    } catch {
-      return "—";
+      await axios.delete(`http://localhost:3001/api/pacientes/${id}`);
+      obtenerPacientes();
+    } catch (error) {
+      console.error("Error al eliminar paciente:", error);
+      alert("No se pudo eliminar el paciente.");
     }
   };
 
-  const pacientesFiltrados = pacientes.filter((p) =>
-    p.nombreCompleto?.toLowerCase().includes(busqueda.toLowerCase())
-  );
+  const getSexoClass = (sexo = "") => {
+    const s = sexo.toLowerCase();
+
+    if (s.includes("femenino")) return "rol-enfermera";
+    if (s.includes("masculino")) return "rol-admin";
+
+    return "rol-default";
+  };
 
   return (
     <Layout>
-      <div className="personal-container">
-        <div className="header-section">
-          <h1>Lista de Pacientes</h1>
-          <p>
-            Pacientes registrados en el establecimiento de salud{" "}
-            <strong>{userEstablecimiento}</strong>.
-          </p>
+      <div className="personal-page">
+        <div className="personal-header-simple">
+          <div>
+            <h1>Lista de Pacientes</h1>
+            <p>
+              Establecimiento:
+              <span className="establecimiento-title">
+                {userEstablecimiento}
+              </span>
+            </p>
+          </div>
+
+          <button
+            className="btn-add-top"
+            onClick={() => navigate("/añadir-pacientePS")}
+          >
+            + Registrar paciente
+          </button>
         </div>
 
-        {/* 🔹 Barra de búsqueda */}
-        <div className="search-bar">
-          <input
-            type="text"
-            placeholder="Buscar paciente por nombre..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
+        <div className="filters-card">
+          <div className="filters-row pacientes-filters-row">
+            <div className="search-control">
+              <span className="search-icon">🔎</span>
+              <input
+                type="text"
+                placeholder="Buscar por nombre o CI..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+              />
+            </div>
+
+            <select
+              className="filter-select"
+              value={filtroCriterio}
+              onChange={handleCriterioChange}
+            >
+              <option value="">Todos los criterios</option>
+              {criteriosDisponibles.map((criterio) => (
+                <option key={criterio} value={criterio}>
+                  {criterio}
+                </option>
+              ))}
+            </select>
+
+            {criterioEsExtrapulmonar && (
+              <select
+                className="filter-select"
+                value={filtroTipoExtra}
+                onChange={(e) => setFiltroTipoExtra(e.target.value)}
+              >
+                <option value="">Tipo extrapulmonar</option>
+                {tiposExtraDisponibles.map((tipo) => (
+                  <option key={tipo} value={tipo}>
+                    {tipo}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            <select
+              className="filter-select"
+              value={filtroSexo}
+              onChange={(e) => setFiltroSexo(e.target.value)}
+            >
+              <option value="">Todos los sexos</option>
+              {sexosDisponibles.map((sexo) => (
+                <option key={sexo} value={sexo}>
+                  {sexo}
+                </option>
+              ))}
+            </select>
+
+            <select
+              className="filter-select"
+              value={filtroEdad}
+              onChange={(e) => setFiltroEdad(e.target.value)}
+            >
+              <option value="">Todas las edades</option>
+              <option value="menor">Menores de edad</option>
+              <option value="adulto">Adultos</option>
+              <option value="adultoMayor">Adultos mayores</option>
+            </select>
+
+            <button className="btn-clear-filters" onClick={limpiarFiltros}>
+              Limpiar
+            </button>
+          </div>
+
+          <div className="filters-summary">
+            Mostrando <strong>{pacientesFiltrados.length}</strong> de{" "}
+            <strong>{pacientes.length}</strong> pacientes
+          </div>
         </div>
 
-        {/* 🔹 Tabla moderna */}
-        <div className="table-container mt-4">
-          <table className="custom-table">
-            <thead>
-              <tr>
-                <th>Nombre Completo</th>
-                <th>Celular</th>
-                <th>Fecha Nac.</th>
-                <th>Sexo</th>
-                <th>Dirección</th>
-                <th>CI</th>
-                <th>Criterio Ingreso</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pacientesFiltrados.length > 0 ? (
-                pacientesFiltrados.map((p) => (
-                  <tr key={p.idPersona}>
-                    <td>{p.nombreCompleto}</td>
-                    <td>{p.numeroCelular}</td>
-                    <td>{formatearFecha(p.fechaNacimiento)}</td>
-                    <td>{p.sexo}</td>
-                    <td>{p.direccion}</td>
-                    <td>{p.CI}</td>
-                    <td>{p.criterioIngreso}</td>
-                    <td className="acciones">
-                      <button
-                        className="icon-btn edit"
-                        title="Editar"
-                        onClick={() => handleActualizarPaciente(p.idPersona)}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M12 20h9" />
-                          <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                        </svg>
-                      </button>
+        <div className="table-card">
+          <div className="table-responsive">
+            <table className="custom-table pacientes-table">
+              <thead>
+                <tr>
+                  <th>Nombre completo</th>
+                  <th>Celular</th>
+                  <th>Fecha nacimiento</th>
+                  <th>Sexo</th>
+                  <th>Dirección</th>
+                  <th>CI</th>
+                  <th>Criterio de ingreso</th>
+                  <th className="acciones-col">Acciones</th>
+                </tr>
+              </thead>
 
-                      <button
-                        className="icon-btn delete"
-                        title="Eliminar"
-                        onClick={() => desactivarPaciente(p.idPersona)}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
+              <tbody>
+                {pacientesFiltrados.length > 0 ? (
+                  pacientesFiltrados.map((p) => (
+                    <tr key={p.idPersona}>
+                      <td className="nombre-simple">
+                        {p.nombreCompleto || "Sin nombre"}
+                      </td>
+
+                      <td>{p.numeroCelular || "Sin registro"}</td>
+
+                      <td>{formatDate(p.fechaNacimiento)}</td>
+
+                      <td>
+                        <span className={`role-badge ${getSexoClass(p.sexo)}`}>
+                          {p.sexo || "Sin registro"}
+                        </span>
+                      </td>
+
+                      <td className="direccion-cell">
+                        {p.direccion || "Sin dirección"}
+                      </td>
+
+                      <td>{p.CI || "Sin registro"}</td>
+
+                      <td className="criterio-cell">
+                        <div className="criterio-principal">
+                          {p.criterioIngreso || "Sin criterio"}
+                        </div>
+
+                        {p.tipoExtrapulmonar && (
+                          <div className="criterio-extra">
+                            Tipo extrapulmonar: {p.tipoExtrapulmonar}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="acciones">
+                        <button
+                          className="icon-btn edit"
+                          onClick={() => handleEditar(p.idPersona)}
+                          title="Editar paciente"
                         >
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6l-2 14H7L5 6" />
-                          <path d="M10 11v6" />
-                          <path d="M14 11v6" />
-                          <path d="M9 6V4h6v2" />
-                        </svg>
-                      </button>
+                          ✎
+                        </button>
+
+                        <button
+                          className="icon-btn delete"
+                          onClick={() => handleEliminar(p.idPersona)}
+                          title="Eliminar paciente"
+                        >
+                          🗑
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="8" className="no-data">
+                      No se encontraron pacientes con los filtros seleccionados.
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="8" className="no-data">
-                    No se encontraron pacientes en este establecimiento
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* 🔹 Botón añadir */}
-        <div className="actions mt-4">
-          <Link to="/añadir-pacientePS" className="btn-action add">
-            Añadir Nuevo Paciente
-          </Link>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </Layout>

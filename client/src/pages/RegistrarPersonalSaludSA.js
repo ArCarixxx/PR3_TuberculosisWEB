@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
-import "./RegistrarPersonalSalud.css"; // nuevo estilo visual
+import "./RegistrarPersonalSalud.css";
 
 const RegistrarPersonalSalud = () => {
   const navigate = useNavigate();
@@ -12,6 +12,7 @@ const RegistrarPersonalSalud = () => {
     primerApellido: "",
     segundoApellido: "",
     CI: "",
+    complementoCI: "",
     numeroCelular: "",
     rol: "",
     EstablecimientoSalud_idEstablecimientoSalud: "",
@@ -24,7 +25,9 @@ const RegistrarPersonalSalud = () => {
   useEffect(() => {
     const fetchEstablecimientos = async () => {
       try {
-        const response = await axios.get("http://localhost:3001/api/establecimientos");
+        const response = await axios.get(
+          "http://localhost:3001/api/establecimientos"
+        );
         setEstablecimientos(response.data);
       } catch (error) {
         console.error("Error al obtener los establecimientos:", error);
@@ -35,10 +38,50 @@ const RegistrarPersonalSalud = () => {
   }, []);
 
   const handleChange = (e) => {
+    const { id, value } = e.target;
+
+    if (id === "CI") {
+      const soloNumeros = value.replace(/\D/g, "");
+      setFormData({
+        ...formData,
+        CI: soloNumeros,
+      });
+      return;
+    }
+
+    if (id === "complementoCI") {
+      const complementoLimpio = value
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "")
+        .slice(0, 3);
+
+      setFormData({
+        ...formData,
+        complementoCI: complementoLimpio,
+      });
+      return;
+    }
+
+    if (id === "numeroCelular") {
+      const soloNumeros = value.replace(/\D/g, "");
+      setFormData({
+        ...formData,
+        numeroCelular: soloNumeros,
+      });
+      return;
+    }
+
     setFormData({
       ...formData,
-      [e.target.id]: e.target.value,
+      [id]: value,
     });
+  };
+
+  const construirCICompleto = () => {
+    const ciBase = formData.CI.trim();
+    const complemento = formData.complementoCI.trim();
+
+    return complemento ? `${ciBase}-${complemento}` : ciBase;
   };
 
   const handleSubmit = async (e) => {
@@ -46,20 +89,47 @@ const RegistrarPersonalSalud = () => {
     setLoading(true);
     setError("");
 
-    const { CI, numeroCelular } = formData;
-    if (!/^\d+$/.test(CI) || !/^\d+$/.test(numeroCelular)) {
-      setError("El CI y el número de celular solo pueden contener números.");
+    const ciCompleto = construirCICompleto();
+
+    if (!formData.CI.trim()) {
+      setError("El número de CI es obligatorio.");
+      setLoading(false);
+      return;
+    }
+
+    if (!/^\d+$/.test(formData.CI)) {
+      setError("El número de CI solo puede contener números.");
+      setLoading(false);
+      return;
+    }
+
+    if (ciCompleto.length > 12) {
+      setError("El CI con complemento no puede superar los 12 caracteres.");
+      setLoading(false);
+      return;
+    }
+
+    if (!/^\d+$/.test(formData.numeroCelular)) {
+      setError("El número de celular solo puede contener números.");
       setLoading(false);
       return;
     }
 
     try {
-      const response = await axios.post("http://localhost:3001/api/personalSalud", formData);
+      const dataToSend = {
+        ...formData,
+        CI: ciCompleto,
+      };
 
-      const usuario = `${formData.nombres.slice(0, 3).toLowerCase()}${formData.primerApellido
+      delete dataToSend.complementoCI;
+
+      await axios.post("http://localhost:3001/api/personalSalud", dataToSend);
+
+      const usuario = `${formData.nombres
         .slice(0, 3)
-        .toLowerCase()}`;
-      const contrasenia = CI;
+        .toLowerCase()}${formData.primerApellido.slice(0, 3).toLowerCase()}`;
+
+      const contrasenia = ciCompleto;
 
       alert(
         `✅ Personal de salud registrado.\n\nCredenciales generadas:\nUsuario: ${usuario}\nContraseña: ${contrasenia}`
@@ -87,7 +157,9 @@ const RegistrarPersonalSalud = () => {
         <div className="form-card">
           <h2 className="text-center mb-4">Registrar Personal de Salud</h2>
 
-          {error && <div className="alert alert-danger text-center">{error}</div>}
+          {error && (
+            <div className="alert alert-danger text-center">{error}</div>
+          )}
 
           <form onSubmit={handleSubmit}>
             <div className="row">
@@ -129,7 +201,7 @@ const RegistrarPersonalSalud = () => {
                 />
               </div>
 
-              <div className="col-md-6 mb-3">
+              <div className="col-md-4 mb-3">
                 <label className="form-label">* CI</label>
                 <input
                   type="text"
@@ -138,7 +210,21 @@ const RegistrarPersonalSalud = () => {
                   placeholder="Ej: 12345678"
                   value={formData.CI}
                   onChange={handleChange}
+                  maxLength={10}
                   required
+                />
+              </div>
+
+              <div className="col-md-2 mb-3">
+                <label className="form-label">Complemento</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  id="complementoCI"
+                  placeholder="Ej: 1A"
+                  value={formData.complementoCI}
+                  onChange={handleChange}
+                  maxLength={3}
                 />
               </div>
 
@@ -191,9 +277,14 @@ const RegistrarPersonalSalud = () => {
             </div>
 
             <div className="form-actions">
-              <button type="submit" className="btn btn-primary" disabled={loading}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={loading}
+              >
                 {loading ? "Registrando..." : "Registrar"}
               </button>
+
               <button
                 type="button"
                 className="btn btn-secondary ms-2"

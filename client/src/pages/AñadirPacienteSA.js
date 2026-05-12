@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
-import "./RegistrarPersonalSalud.css"; // usa tu mismo CSS
+import "./RegistrarPersonalSalud.css";
 
 const RegistrarPaciente = () => {
   const navigate = useNavigate();
@@ -16,15 +16,17 @@ const RegistrarPaciente = () => {
     sexo: "",
     direccion: "",
     CI: "",
+    complementoCI: "",
     EstablecimientoSalud_idEstablecimientoSalud: "",
     idCriterioIngreso: "",
+    tipoExtrapulmonar: "",
   });
 
   const [establecimientos, setEstablecimientos] = useState([]);
   const [criterios, setCriterios] = useState([]);
+  const [esExtrapulmonar, setEsExtrapulmonar] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // 🔹 Cargar establecimientos y criterios
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -46,17 +48,76 @@ const RegistrarPaciente = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === "CI") {
+      const soloNumeros = value.replace(/\D/g, "");
+      setNuevoPaciente((prev) => ({ ...prev, CI: soloNumeros }));
+      return;
+    }
+
+    if (name === "complementoCI") {
+      const complementoLimpio = value
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "")
+        .slice(0, 3);
+
+      setNuevoPaciente((prev) => ({
+        ...prev,
+        complementoCI: complementoLimpio,
+      }));
+      return;
+    }
+
     setNuevoPaciente((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "idCriterioIngreso") {
+      const criterioSeleccionado = criterios.find(
+        (c) => c.idCriterioIngreso.toString() === value
+      );
+
+      if (
+        criterioSeleccionado &&
+        criterioSeleccionado.tipo === "Extrapulmonar"
+      ) {
+        setEsExtrapulmonar(true);
+      } else {
+        setEsExtrapulmonar(false);
+        setNuevoPaciente((prev) => ({ ...prev, tipoExtrapulmonar: "" }));
+      }
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const ciCompleto = nuevoPaciente.complementoCI
+      ? `${nuevoPaciente.CI}-${nuevoPaciente.complementoCI}`
+      : nuevoPaciente.CI;
+
+    if (ciCompleto.length > 12) {
+      alert("El CI con complemento no puede superar los 12 caracteres.");
+      return;
+    }
+
     if (nuevoPaciente.numeroCelular.length !== 8) {
       alert("El número de celular debe tener 8 dígitos.");
       return;
     }
+
+    if (esExtrapulmonar && !nuevoPaciente.tipoExtrapulmonar.trim()) {
+      alert("Por favor, especifique el tipo de extrapulmonar.");
+      return;
+    }
+
     try {
-      await axios.post("http://localhost:3001/api/pacientes", nuevoPaciente);
+      const dataToSend = {
+        ...nuevoPaciente,
+        CI: ciCompleto,
+      };
+
+      delete dataToSend.complementoCI;
+
+      await axios.post("http://localhost:3001/api/pacientes", dataToSend);
       alert("✅ Paciente registrado correctamente");
       navigate("/lista-pacientesSA");
     } catch (error) {
@@ -86,8 +147,8 @@ const RegistrarPaciente = () => {
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Ej: Juan Carlos"
                   name="nombres"
+                  placeholder="Ej: Pedro Luis"
                   value={nuevoPaciente.nombres}
                   onChange={handleChange}
                   required
@@ -99,8 +160,8 @@ const RegistrarPaciente = () => {
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Ej: Pérez"
                   name="primerApellido"
+                  placeholder="Ej: Pérez"
                   value={nuevoPaciente.primerApellido}
                   onChange={handleChange}
                   required
@@ -112,23 +173,37 @@ const RegistrarPaciente = () => {
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Ej: Gómez"
                   name="segundoApellido"
+                  placeholder="Ej: García"
                   value={nuevoPaciente.segundoApellido}
                   onChange={handleChange}
                 />
               </div>
 
-              <div className="col-md-6">
+              <div className="col-md-4">
                 <label className="form-label">* CI</label>
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Ej: 12345678"
                   name="CI"
+                  placeholder="Ej: 123456789"
                   value={nuevoPaciente.CI}
                   onChange={handleChange}
+                  maxLength={10}
                   required
+                />
+              </div>
+
+              <div className="col-md-2">
+                <label className="form-label">Complemento</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  name="complementoCI"
+                  placeholder="Ej: 1A"
+                  value={nuevoPaciente.complementoCI}
+                  onChange={handleChange}
+                  maxLength={3}
                 />
               </div>
 
@@ -137,8 +212,8 @@ const RegistrarPaciente = () => {
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Ej: 76543210"
                   name="numeroCelular"
+                  placeholder="Ej: 789456123"
                   value={nuevoPaciente.numeroCelular}
                   onChange={handleChange}
                   required
@@ -177,8 +252,8 @@ const RegistrarPaciente = () => {
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Ej: Av. América #123"
                   name="direccion"
+                  placeholder="Ej: Calle Principal, Número 123"
                   value={nuevoPaciente.direccion}
                   onChange={handleChange}
                 />
@@ -195,19 +270,41 @@ const RegistrarPaciente = () => {
                 >
                   <option value="">Seleccionar Criterio</option>
                   {criterios.map((c) => (
-                    <option key={c.idCriterioIngreso} value={c.idCriterioIngreso}>
+                    <option
+                      key={c.idCriterioIngreso}
+                      value={c.idCriterioIngreso}
+                    >
                       {`${c.tipo} ${c.subtipo ? `- ${c.subtipo}` : ""} (${c.estadoIngreso})`}
                     </option>
                   ))}
                 </select>
               </div>
 
+              {esExtrapulmonar && (
+                <div className="col-md-6">
+                  <label className="form-label">
+                    * Tipo de Extrapulmonar
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    name="tipoExtrapulmonar"
+                    placeholder="Ej: pleural, ganglionar..."
+                    value={nuevoPaciente.tipoExtrapulmonar}
+                    onChange={handleChange}
+                    required={esExtrapulmonar}
+                  />
+                </div>
+              )}
+
               <div className="col-md-6">
                 <label className="form-label">* Establecimiento de Salud</label>
                 <select
                   className="form-select"
                   name="EstablecimientoSalud_idEstablecimientoSalud"
-                  value={nuevoPaciente.EstablecimientoSalud_idEstablecimientoSalud}
+                  value={
+                    nuevoPaciente.EstablecimientoSalud_idEstablecimientoSalud
+                  }
                   onChange={handleChange}
                   required
                 >
