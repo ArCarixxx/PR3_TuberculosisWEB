@@ -1,6 +1,6 @@
 import React from "react";
 import Layout from "../components/LayoutPersonalSalud";
-import VideoDownloader from "../components/VideoDownloader";
+import VideoDownloader from "../components/VideoDownloaderPS";
 
 const VideoListAdmin = () => {
   return (
